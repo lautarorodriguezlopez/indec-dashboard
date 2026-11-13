@@ -1,0 +1,23 @@
+# indec-dashboard
+
+Dashboard con las estadísticas oficiales del INDEC, tomadas del [Catálogo API-INDEC](https://api.indec.gob.ar/) (en beta). Se actualiza todos los lunes a la mañana.
+
+Fuente de los datos: INDEC.
+
+## Correr la prueba de ingesta en tu compu
+
+1. Copiá `.env.example` como `.env` y pegá tu token después del `=`. El `.env` no se sube al repo.
+2. Instalá las dependencias e iniciá la prueba:
+
+   ```powershell
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   python ingesta/prueba_ingesta.py
+   ```
+
+La prueba baja IPC, EMAE e índice de salarios desde 2023. Los guarda en `data/indec.duckdb` y escribe un resumen en `salida/`. Las dos carpetas quedan fuera del repo.
+
+## Correrla en GitHub
+
+Pestaña **Actions** → **Prueba de ingesta INDEC** → **Run workflow**. Usa el secreto `INDEC_API_TOKEN` del repo, y los resultados quedan como artifact durante 7 días.

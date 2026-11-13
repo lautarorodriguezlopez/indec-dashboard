@@ -1,0 +1,36 @@
+name: Prueba de ingesta INDEC
+
+# Solo se corre a mano (pestaña Actions → Run workflow).
+# La corrida automática de los lunes va en otro workflow (T-004).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prueba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Bajar IPC, EMAE y salarios
+        env:
+          INDEC_API_TOKEN: ${{ secrets.INDEC_API_TOKEN }}
+        run: python ingesta/prueba_ingesta.py
+
+      - name: Guardar resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: prueba-ingesta
+          path: salida/
+          retention-days: 7

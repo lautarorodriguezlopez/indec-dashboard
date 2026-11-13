@@ -6,6 +6,8 @@
 # Datos y bases locales
 *.duckdb
 *.duckdb.wal
+data/
+salida/
 
 # Python
 __pycache__/
