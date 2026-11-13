@@ -80,7 +80,13 @@ def perfil(nombre: str, endpoint: str, df: pd.DataFrame) -> dict:
 
 def main() -> int:
     if not os.environ.get("INDEC_API_TOKEN"):
-        # pyindec también lo busca en .env; si no está en ningún lado, falla al consultar
+        if not (RAIZ / ".env").exists():
+            print(
+                "ERROR: no hay token. Falta la variable INDEC_API_TOKEN "
+                "(en GitHub: secreto del repo en Settings → Secrets and variables → Actions → Secrets; "
+                "en tu compu: archivo .env)."
+            )
+            return 1
         print("Aviso: INDEC_API_TOKEN no está en el entorno, se busca en .env")
 
     DIR_DATOS.mkdir(exist_ok=True)
