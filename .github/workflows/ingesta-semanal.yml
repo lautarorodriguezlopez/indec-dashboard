@@ -76,3 +76,14 @@ jobs:
 
       - name: Avisar si hay algo que atender
         run: python ingesta/alertas.py
+
+  publicar:
+    needs: ingesta
+    # Publica aunque falle el aviso final (por ejemplo, token por vencer):
+    # lo importante es que los datos se hayan guardado.
+    if: ${{ !cancelled() }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publicar.yml

@@ -4,6 +4,14 @@ Dashboard con las estadísticas oficiales del INDEC, tomadas del [Catálogo API-
 
 Fuente de los datos: INDEC.
 
+**Sitio:** https://lautarorodriguezlopez.github.io/indec-dashboard/
+
+## Cómo funciona
+
+1. **Ingesta semanal** (`.github/workflows/ingesta-semanal.yml`): todos los lunes a las 06:17 (hora argentina) baja los 19 servicios con `ingesta/ingestar.py`. Guarda los datos en Parquet en el release `datos`.
+2. **Publicación** (`.github/workflows/publicar.yml`): `ingesta/sitio.py` arma los JSON del sitio y lo publica en GitHub Pages.
+3. **Avisos:** si falla un servicio o al token le quedan menos de 15 días, la corrida falla y GitHub manda un mail.
+
 ## Correr la prueba de ingesta en tu compu
 
 1. Copiá `.env.example` como `.env` y pegá tu token después del `=`. El `.env` no se sube al repo.

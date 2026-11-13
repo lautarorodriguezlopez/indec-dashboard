@@ -8,6 +8,8 @@
 *.duckdb.wal
 data/
 salida/
+site/data/
+site/datos/
 
 # Python
 __pycache__/

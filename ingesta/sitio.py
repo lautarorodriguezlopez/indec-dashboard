@@ -277,39 +277,39 @@ def semaforo(pr: dict, bo: dict, pu: dict) -> list[dict]:
     s = pu["emae"]["series"]["Índice serie desestacionalizada"]
     ult, prom = var_vs_prom(s)
     if ult is not None:
-        item("Actividad (EMAE)", pu["emae"]["p"][-1], ult, prom, "promedio de los 12 meses previos",
+        item("Actividad (EMAE)", pu["emae"]["p"][-1], ult, prom, "frente al promedio de los 12 meses previos",
              (ult / prom - 1) * 100, True, 0.5, "índice")
 
     for clave, nombre in (("ipi_manufacturero", "Industria (IPI)"), ("ipi_minero", "Minería (IPI)")):
         s = pu[clave]["indice_desest"]
         ult, prom = var_vs_prom(s["v"])
         if ult is not None:
-            item(nombre, s["p"][-1], ult, prom, "promedio de los 12 meses previos",
+            item(nombre, s["p"][-1], ult, prom, "frente al promedio de los 12 meses previos",
                  (ult / prom - 1) * 100, True, 1.0, "índice")
 
     ng = pr["nivel_general"]["Nacional"]
     ult, prom = var_vs_prom(ng["series"]["v_m"])
     if ult is not None:
-        item("Inflación mensual (IPC)", ng["p"][-1], ult, prom, "promedio de los 12 meses previos",
+        item("Inflación mensual (IPC)", ng["p"][-1], ult, prom, "frente al promedio de los 12 meses previos",
              ult - prom, False, 0.2, "%")
 
     t = pu["trabajo"]
     des = t["series"]["Desocupación"]
     if len(des) >= 5 and des[-1] is not None and des[-5] is not None:
-        item("Desocupación (EPH)", t["p"][-1], des[-1], des[-5], "mismo trimestre del año anterior",
+        item("Desocupación (EPH)", t["p"][-1], des[-1], des[-5], "frente al mismo trimestre del año anterior",
              des[-1] - des[-5], False, 0.3, "%")
 
     sr = bo["salario_real"]["series"].get("Total registrado", [])
     if len(sr) >= 13 and sr[-1] and sr[-13]:
-        item("Salario real registrado", bo["salario_real"]["p"][-1], sr[-1], sr[-13], "12 meses antes",
+        item("Salario real registrado", bo["salario_real"]["p"][-1], sr[-1], sr[-13], "frente a 12 meses antes",
              (sr[-1] / sr[-13] - 1) * 100, True, 1.0, "índice")
 
     saldo = [v for v in pu["comex"]["series"]["Saldo"] if v is not None]
     if len(saldo) >= 15:
         ult3 = sum(saldo[-3:]) / 3
         prev12 = sum(saldo[-15:-3]) / 12
-        item("Saldo comercial", pu["comex"]["p"][-1], ult3, prev12,
-             "promedio mensual de los 12 meses previos (últimos 3 meses vs. anteriores)",
+        item("Saldo comercial (promedio 3 meses)", pu["comex"]["p"][-1], ult3, prev12,
+             "frente al promedio mensual de los 12 meses previos",
              ult3 - prev12, True, 100, "millones de USD")
     return out
 
