@@ -28,6 +28,11 @@ jobs:
           INDEC_API_TOKEN: ${{ secrets.INDEC_API_TOKEN }}
         run: python ingesta/prueba_ingesta.py
 
+      - name: Mostrar resumen en el log
+        run: |
+          cat salida/resumen.json
+          for f in salida/*.csv; do echo "== $f"; head -n 6 "$f"; done
+
       - name: Guardar resultados
         uses: actions/upload-artifact@v4
         with:
