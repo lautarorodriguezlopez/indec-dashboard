@@ -58,7 +58,8 @@ def perfil(nombre: str, endpoint: str, df: pd.DataFrame) -> dict:
     """Resumen de un dataset: filas, columnas, valores y último período."""
     categoricas = {}
     for col in df.columns:
-        if df[col].dtype == object and col not in ("valor", "observaciones"):
+        es_texto = pd.api.types.is_string_dtype(df[col]) or df[col].dtype == object
+        if es_texto and col not in ("valor", "valor_null", "observaciones"):
             valores = sorted(df[col].dropna().astype(str).unique().tolist())
             categoricas[col] = {
                 "cantidad": len(valores),
