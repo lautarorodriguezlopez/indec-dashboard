@@ -1,0 +1,19 @@
+# Secretos: nunca se suben al repo
+.env
+.env.*
+!.env.example
+
+# Datos y bases locales
+*.duckdb
+*.duckdb.wal
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
