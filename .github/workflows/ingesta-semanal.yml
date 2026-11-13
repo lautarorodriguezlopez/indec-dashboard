@@ -76,6 +76,7 @@ jobs:
               --latest=false
           fi
           gh release upload "$RELEASE_TAG" data/parquet/* --clobber
+          gh release edit "$RELEASE_TAG" --notes "Datos del Catálogo API-INDEC en Parquet, actualizados cada día hábil a las 17:13 (hora argentina). Fuente: INDEC."
 
       - name: Avisar si hay algo que atender
         run: python ingesta/alertas.py
