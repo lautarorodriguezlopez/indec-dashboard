@@ -1,0 +1,29 @@
+name: Explorar estructura de los datos
+
+# Manual: imprime columnas y valores de cada tabla del release "datos".
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  explorar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: gh release download datos -D data/parquet --pattern "*.parquet"
+      - name: Estructura
+        run: |
+          echo "<<<EXPLORAR"
+          python ingesta/explorar.py | gzip -c | base64 -w 0
+          echo
+          echo "EXPLORAR>>>"
