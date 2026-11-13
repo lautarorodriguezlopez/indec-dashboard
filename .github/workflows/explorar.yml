@@ -27,3 +27,11 @@ jobs:
           python ingesta/explorar.py | gzip -c | base64 -w 0
           echo
           echo "EXPLORAR>>>"
+      - run: gh release download datos -D data/parquet --pattern "estado.json"
+      - name: Datos del sitio
+        run: |
+          python ingesta/sitio.py
+          echo "<<<SITIO"
+          gzip -c site/data/tableros.json | base64 -w 0
+          echo
+          echo "SITIO>>>"
