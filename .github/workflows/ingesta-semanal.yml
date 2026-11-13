@@ -1,0 +1,78 @@
+name: Ingesta semanal INDEC
+
+# Todos los lunes a las 06:17 de Argentina (09:17 UTC). El minuto no es 00
+# para esquivar la congestión de GitHub a la hora en punto.
+# También se puede correr a mano desde Actions → Run workflow.
+on:
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      completa:
+        description: "Bajar todo de nuevo (pasada completa)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # para guardar los datos como release "datos"
+
+concurrency:
+  group: ingesta
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: datos
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  ingesta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Traer los datos de la semana anterior
+        run: |
+          mkdir -p data/parquet
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release download "$RELEASE_TAG" -D data/parquet --clobber
+            echo "Datos previos: $(ls data/parquet | wc -l) archivos"
+          else
+            echo "No hay datos previos: va una pasada completa."
+          fi
+
+      - name: Elegir modo
+        id: modo
+        run: |
+          # Completa si se pidió a mano, si no hay datos previos o si es el primer lunes del mes
+          if [ "${{ inputs.completa }}" = "true" ] || [ ! -f data/parquet/estado.json ] || [ "$(date -u +%d)" -le 7 ]; then
+            echo "flag=--completa" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bajar los 19 servicios
+        env:
+          INDEC_API_TOKEN: ${{ secrets.INDEC_API_TOKEN }}
+        run: python ingesta/ingestar.py ${{ steps.modo.outputs.flag }}
+
+      - name: Guardar los datos en el release "datos"
+        if: always() && hashFiles('data/parquet/estado.json') != ''
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --title "Datos INDEC" \
+              --notes "Datos del Catálogo API-INDEC en Parquet, actualizados todos los lunes. Fuente: INDEC." \
+              --latest=false
+          fi
+          gh release upload "$RELEASE_TAG" data/parquet/* --clobber
+
+      - name: Avisar si hay algo que atender
+        run: python ingesta/alertas.py
