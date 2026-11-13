@@ -1,7 +1,7 @@
 name: Prueba de ingesta INDEC
 
 # Solo se corre a mano (pestaña Actions → Run workflow).
-# La corrida automática de los lunes va en otro workflow (T-004).
+# La corrida automática (días hábiles) va en ingesta-semanal.yml.
 on:
   workflow_dispatch:
 

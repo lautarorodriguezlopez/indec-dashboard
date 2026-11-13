@@ -1,6 +1,6 @@
 # indec-dashboard
 
-Dashboard con las estadísticas oficiales del INDEC, tomadas del [Catálogo API-INDEC](https://api.indec.gob.ar/) (en beta). Se actualiza todos los lunes a la mañana.
+Dashboard con las estadísticas oficiales del INDEC, tomadas del [Catálogo API-INDEC](https://api.indec.gob.ar/) (en beta). Se actualiza cada día hábil a las 17:13 (hora argentina), una hora después de que el INDEC publica sus informes.
 
 Fuente de los datos: INDEC.
 
@@ -8,7 +8,7 @@ Fuente de los datos: INDEC.
 
 ## Cómo funciona
 
-1. **Ingesta semanal** (`.github/workflows/ingesta-semanal.yml`): todos los lunes a las 06:17 (hora argentina) baja los 19 servicios con `ingesta/ingestar.py`. Guarda los datos en Parquet en el release `datos`.
+1. **Ingesta** (`.github/workflows/ingesta-semanal.yml`): de lunes a viernes a las 17:13 (hora argentina) baja los 19 servicios con `ingesta/ingestar.py`, en modo incremental (pasada completa el primer lunes de cada mes). Guarda los datos en Parquet en el release `datos`.
 2. **Publicación** (`.github/workflows/publicar.yml`): `ingesta/sitio.py` arma los JSON del sitio y lo publica en GitHub Pages.
 3. **Avisos:** si falla un servicio o al token le quedan menos de 15 días, la corrida falla y GitHub manda un mail.
 

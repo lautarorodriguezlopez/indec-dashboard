@@ -444,7 +444,7 @@
     .then(([t, c]) => {
       T = t; C = c;
       document.getElementById("actualizado").textContent =
-        "Última actualización: " + new Date(c.generado).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" }) + ".";
+        "Última actualización: " + new Date(c.generado).toLocaleString("es-AR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" }) + " (hora argentina).";
       iniciarControles();
       render();
     })

@@ -1,11 +1,13 @@
-name: Ingesta semanal INDEC
+name: Ingesta INDEC
 
-# Todos los lunes a las 06:17 de Argentina (09:17 UTC). El minuto no es 00
-# para esquivar la congestión de GitHub a la hora en punto.
+# De lunes a viernes a las 17:13 de Argentina (20:13 UTC). El INDEC publica
+# sus informes en días hábiles a las 16:00 y la API se actualiza minutos
+# después, así que cada dato nuevo aparece en el sitio el mismo día.
+# El minuto no es 00 para esquivar la congestión de GitHub a la hora en punto.
 # También se puede correr a mano desde Actions → Run workflow.
 on:
   schedule:
-    - cron: "17 9 * * 1"
+    - cron: "13 20 * * 1-5"
   workflow_dispatch:
     inputs:
       completa:
@@ -53,7 +55,8 @@ jobs:
         id: modo
         run: |
           # Completa si se pidió a mano, si no hay datos previos o si es el primer lunes del mes
-          if [ "${{ inputs.completa }}" = "true" ] || [ ! -f data/parquet/estado.json ] || [ "$(date -u +%d)" -le 7 ]; then
+          if [ "${{ inputs.completa }}" = "true" ] || [ ! -f data/parquet/estado.json ] \
+             || { [ "$(date -u +%d)" -le 7 ] && [ "$(date -u +%u)" -eq 1 ]; }; then
             echo "flag=--completa" >> "$GITHUB_OUTPUT"
           else
             echo "flag=" >> "$GITHUB_OUTPUT"
@@ -69,7 +72,7 @@ jobs:
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --title "Datos INDEC" \
-              --notes "Datos del Catálogo API-INDEC en Parquet, actualizados todos los lunes. Fuente: INDEC." \
+              --notes "Datos del Catálogo API-INDEC en Parquet, actualizados cada día hábil. Fuente: INDEC." \
               --latest=false
           fi
           gh release upload "$RELEASE_TAG" data/parquet/* --clobber
