@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'; object-src 'none'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
   <title>Tablero INDEC · Estadísticas oficiales de Argentina</title>
   <meta name="description" content="Precios, ingresos y actividad de la Argentina con datos oficiales del INDEC, actualizados cada día hábil.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%232a78d6%22/%3E%3Cpath d=%22M3 11l3-3 2 2 5-5%22 stroke=%22white%22 stroke-width=%221.6%22 fill=%22none%22/%3E%3C/svg%3E">
@@ -23,6 +25,7 @@
       <button role="tab" aria-selected="false" data-tab="precios">Precios</button>
       <button role="tab" aria-selected="false" data-tab="bolsillo">Bolsillo</button>
       <button role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
+      <button role="tab" aria-selected="false" data-tab="explorador">Explorador</button>
       <button role="tab" aria-selected="false" data-tab="catalogo">Datos</button>
     </nav>
 
@@ -71,6 +74,28 @@
           <figure class="card" id="c-ipi"></figure>
           <figure class="card" id="c-trabajo"></figure>
           <figure class="card" id="c-comex"></figure>
+        </div>
+      </section>
+
+      <section id="explorador" class="panel" role="tabpanel" hidden>
+        <h2>Explorador de los 19 servicios</h2>
+        <p class="lead">Elegí un dataset, filtralo, graficalo y bajá lo que necesites en CSV. Todo corre en tu navegador: no se envía nada a ningún servidor.</p>
+        <div class="filtros ex-fila">
+          <label class="ex-campo ex-dataset"><span>Dataset</span><select id="ex-tabla-sel"></select></label>
+        </div>
+        <p class="nota" id="ex-desc"></p>
+        <div class="filtros ex-fila" id="ex-filtros"></div>
+        <div class="filtros ex-fila" id="ex-grafico-ctrl"></div>
+        <p class="nota" id="ex-estado" role="status" aria-live="polite"></p>
+        <figure class="card" id="ex-grafico" hidden></figure>
+        <div class="card ex-resultados">
+          <div class="ex-barra">
+            <button type="button" id="ex-csv" class="boton">Descargar CSV</button>
+            <span class="ex-pag"><button type="button" id="ex-prev" class="boton" aria-label="Página anterior">‹</button>
+            <span id="ex-pag-txt"></span>
+            <button type="button" id="ex-next" class="boton" aria-label="Página siguiente">›</button></span>
+          </div>
+          <div class="tabla-wrap"><table id="ex-tabla" class="tabla"></table></div>
         </div>
       </section>
 

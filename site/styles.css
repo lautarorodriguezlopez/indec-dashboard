@@ -181,3 +181,26 @@ footer { margin-top: 32px; color: var(--text-muted); font-size: 13px; }
 @media (forced-colors: active) {
   .sem { border-left-width: 6px; }
 }
+
+/* Muestras de color de series (clases, para no usar estilos en línea: CSP) */
+.sw0 { background: var(--series-1); }
+.sw1 { background: var(--series-2); }
+.sw2 { background: var(--series-3); }
+.sw3 { background: var(--series-4); }
+
+/* Explorador */
+.ex-fila { align-items: flex-end; }
+.ex-campo { display: flex; flex-direction: column; gap: 4px; color: var(--text-secondary); font-size: 13px; min-width: 0; }
+.ex-campo select { max-width: 280px; }
+.ex-dataset select { max-width: 100%; min-width: min(520px, 90vw); }
+#ex-grafico { margin-bottom: 16px; }
+.ex-resultados { padding: 12px; }
+.ex-barra { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.ex-pag { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; }
+.boton {
+  font: inherit; font-size: 14px; background: var(--surface-2); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+}
+.boton:disabled, .boton[data-off="1"] { opacity: 0.45; cursor: default; }
+.boton:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#ex-tabla td { text-align: left; }

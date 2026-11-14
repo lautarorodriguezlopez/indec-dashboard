@@ -95,7 +95,7 @@
     if (series.length < 2) return;
     const l = document.createElement("div");
     l.className = "leyenda";
-    l.innerHTML = series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.nombre)}</span>`).join("");
+    l.innerHTML = series.map((s) => `<span><i class="sw${s.k ?? 0}"></i>${esc(s.nombre)}</span>`).join("");
     fig.appendChild(l);
   }
   function tablaDatos(fig, p, series, fmt, max = 24) {
@@ -122,7 +122,7 @@
   // ---------------------------------------------------------------- gráfico de líneas
   function lineas(fig, cfg) {
     const { titulo, desc, rango = "todo", fmt = (v) => num(v), cero = false } = cfg;
-    const recorte = recortar(cfg.p, cfg.series.map((s, i) => ({ color: COL[i], ...s })), rango);
+    const recorte = recortar(cfg.p, cfg.series.map((s, i) => ({ color: COL[i], k: i, ...s })), rango);
     const p = recorte.p;
     const series = recorte.series;
     cabecera(fig, titulo, desc);
@@ -197,7 +197,7 @@
         puntos[k].setAttribute("cx", x(i)); puntos[k].setAttribute("cy", y(v)); puntos[k].setAttribute("visibility", "visible");
       });
       mostrarTip(`<div class="tt-t">${esc(fmtP(p[i]))}</div>` + series.map((s) =>
-        `<div class="tt-r"><span><i style="background:${s.color}"></i>${esc(s.nombre)}</span><b>${fmt(s.valores[i])}</b></div>`).join(""), ev);
+        `<div class="tt-r"><span><i class="sw${s.k ?? 0}"></i>${esc(s.nombre)}</span><b>${esc(fmt(s.valores[i]))}</b></div>`).join(""), ev);
     };
     capa.addEventListener("pointermove", mover);
     capa.addEventListener("pointerdown", mover);
@@ -401,8 +401,24 @@
         <td><a href="datos/${encodeURIComponent(s.tabla)}.parquet" download>${esc(s.tabla)}.parquet</a></td></tr>`).join("") + "</tbody>";
   }
 
-  const RENDER = { portada: renderPortada, precios: renderPrecios, bolsillo: renderBolsillo, actividad: renderActividad, catalogo: renderCatalogo };
+  // El explorador se carga recién cuando se abre (trae el motor DuckDB-WASM)
+  let explorador = null;
+  function renderExplorador() {
+    if (explorador) return;
+    explorador = import("./vendor/explorador.js")
+      .then((m) => m.iniciar())
+      .catch((e) => {
+        console.error(e);
+        explorador = null;
+        document.getElementById("ex-estado").textContent = "No se pudo cargar el explorador. Recargá la página.";
+      });
+  }
+
+  const RENDER = { portada: renderPortada, precios: renderPrecios, bolsillo: renderBolsillo, actividad: renderActividad, explorador: renderExplorador, catalogo: renderCatalogo };
   const render = () => { ocultarTip(); RENDER[estado.tab](); };
+
+  // Helpers que usa el explorador (módulo aparte)
+  window.Tablero = Object.freeze({ lineas, esc, num, fmtP });
 
   // ---------------------------------------------------------------- controles
   function iniciarControles() {
@@ -435,7 +451,7 @@
       try { localStorage.setItem("tema", raiz.dataset.theme); } catch (e) { /* sin almacenamiento */ }
     });
     let t;
-    window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(render, 150); });
+    window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { if (estado.tab !== "explorador") render(); }, 150); });
     const h = location.hash.slice(1);
     if (RENDER[h]) document.querySelector(`.tabs button[data-tab="${h}"]`).click();
   }

@@ -36,6 +36,6 @@ jobs:
             site/datos/emae.parquet site/datos/pobreza.parquet site/datos/mercado_trabajo.parquet \
             site/datos/poblacion_nacional.parquet site/datos/poblacion_jurisdiccion.parquet \
             site/datos/canasta_crianza.parquet site/datos/comex_nomenclaturas.parquet \
-            site/datos/importaciones.parquet | base64 -w 0
+            site/datos/importaciones.parquet | base64 -w 20000
           echo
           echo "SITIO>>>"
