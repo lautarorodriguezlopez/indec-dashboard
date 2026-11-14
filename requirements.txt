@@ -1,4 +1,4 @@
 pyindec==0.1.0
-duckdb>=1.1
+duckdb>=1.2
 pandas>=2.2
 pyarrow>=17

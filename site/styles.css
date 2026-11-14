@@ -190,6 +190,7 @@ footer { margin-top: 32px; color: var(--text-muted); font-size: 13px; }
 
 /* Explorador */
 .ex-fila { align-items: flex-end; }
+.filtros label.ex-campo { align-items: flex-start; }
 .ex-campo { display: flex; flex-direction: column; gap: 4px; color: var(--text-secondary); font-size: 13px; min-width: 0; }
 .ex-campo select { max-width: 280px; }
 .ex-dataset select { max-width: 100%; min-width: min(520px, 90vw); }
@@ -203,4 +204,5 @@ footer { margin-top: 32px; color: var(--text-muted); font-size: 13px; }
 }
 .boton:disabled, .boton[data-off="1"] { opacity: 0.45; cursor: default; }
 .boton:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-#ex-tabla td { text-align: left; }
+#ex-tabla td, #ex-tabla th { text-align: left; }
+#ex-tabla td.wrap { min-width: 240px; }

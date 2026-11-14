@@ -359,6 +359,39 @@ def etiqueta(col: str) -> str:
     return col.replace("_", " ").capitalize()
 
 
+def con_tiempo(df: pd.DataFrame, tiempo: str | None) -> pd.DataFrame:
+    df = df.copy()
+    if tiempo == "fecha":
+        anio = pd.to_numeric(df["fecha"], errors="coerce").astype("Int64")
+        df["_anio"], df["_periodo"] = anio, anio.astype(str)
+    elif tiempo:
+        sub = {"mes": "mes", "trimestre": "trimestre", "semestre": "semestre"}[tiempo]
+        anio = df["anio"].astype("Int64")
+        n = df[sub].astype("Int64")
+        pref = {"mes": "", "trimestre": "T", "semestre": "S"}[tiempo]
+        txt = n.map(lambda x: f"{x:02d}" if tiempo == "mes" else f"{pref}{x}", na_action="ignore")
+        df["_anio"], df["_periodo"] = anio, anio.astype(str) + "-" + txt
+    return df
+
+
+def escribir_base(descargas: Path, tablas: list[dict]) -> None:
+    import duckdb
+
+    destino = descargas / "explorador.duckdb"
+    destino.unlink(missing_ok=True)
+    con = duckdb.connect()
+    con.execute(f"ATTACH '{destino.as_posix()}' AS ex (STORAGE_VERSION 'v1.2.0')")
+    for t in tablas:
+        archivo = descargas / f"{t['tabla']}.parquet"
+        df = con_tiempo(pd.read_parquet(archivo), t["tiempo"])
+        con.register("df_tmp", df)
+        con.execute(f'CREATE TABLE ex."{t["tabla"]}" AS SELECT * FROM df_tmp')
+        con.unregister("df_tmp")
+    con.execute("DETACH ex")
+    con.close()
+    print(f"explorador.duckdb: {destino.stat().st_size / 1e6:.1f} MB")
+
+
 def explorador(estado: dict) -> None:
     descargas = SITIO / "datos"
     nom = leer("comex_nomenclaturas")
@@ -418,6 +451,9 @@ def explorador(estado: dict) -> None:
             "medidas": medidas,
             "columnas": [{"col": c, "label": etiqueta(c)} for c in visibles],
         })
+    # Base DuckDB nativa para el explorador: el navegador la lee por rangos HTTP
+    # sin extensiones ni descargas de terceros. Formato compatible con DuckDB-WASM.
+    escribir_base(descargas, tablas)
     (SALIDA / "explorador.json").write_text(json.dumps({"tablas": tablas}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"explorador.json: {len(tablas)} tablas")
 

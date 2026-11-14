@@ -10,7 +10,7 @@ Fuente de los datos: INDEC.
 
 Hay tres formas, de la más simple a la más completa:
 
-1. **Mirar el sitio:** https://lautarorodriguezlopez.github.io/indec-dashboard/
+1. **Mirar el sitio:** https://lautarorodriguezlopez.github.io/indec-dashboard/. En la pestaña *Explorador* podés filtrar y graficar cualquiera de los 19 datasets y bajar el resultado en CSV, todo dentro de tu navegador.
 2. **Bajar los datos:** los 19 servicios están en Parquet en el [release `datos`](https://github.com/lautarorodriguezlopez/indec-dashboard/releases/tag/datos) y en la sección *Datos* del sitio. Se abren con pandas, R, DuckDB o Power BI, sin token:
 
    ```python
@@ -46,6 +46,10 @@ La prueba baja IPC, EMAE e índice de salarios desde 2023. Los guarda en `data/i
 ## Correrla en GitHub
 
 Pestaña **Actions** → **Prueba de ingesta INDEC** → **Run workflow**. Usa el secreto `INDEC_API_TOKEN` del repo, y los resultados quedan como artifact durante 7 días.
+
+## Seguridad
+
+El diseño sigue OWASP Top 10 y OWASP API Security Top 10: no hay servidor propio, el token nunca llega al navegador, las consultas del explorador están parametrizadas y el sitio tiene una Content-Security-Policy estricta. El detalle y cómo reportar vulnerabilidades están en [SECURITY.md](SECURITY.md).
 
 ## Licencia
 

@@ -41,6 +41,18 @@ jobs:
       - name: Armar los datos del sitio
         run: python ingesta/sitio.py
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      # Dependencias fijadas en package-lock.json; sin scripts de instalación
+      - name: Construir el explorador
+        run: |
+          npm ci --ignore-scripts
+          npm audit --omit=optional --audit-level=high
+          npm run build
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

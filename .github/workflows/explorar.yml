@@ -27,15 +27,3 @@ jobs:
           python ingesta/explorar.py | gzip -c | base64 -w 0
           echo
           echo "EXPLORAR>>>"
-      - run: gh release download datos -D data/parquet --pattern "estado.json"
-      - name: Datos del sitio
-        run: |
-          python ingesta/sitio.py
-          echo "<<<SITIO"
-          tar -czf - site/data site/datos/ipc.parquet site/datos/salarios.parquet site/datos/canastas.parquet \
-            site/datos/emae.parquet site/datos/pobreza.parquet site/datos/mercado_trabajo.parquet \
-            site/datos/poblacion_nacional.parquet site/datos/poblacion_jurisdiccion.parquet \
-            site/datos/canasta_crianza.parquet site/datos/comex_nomenclaturas.parquet \
-            site/datos/importaciones.parquet | base64 -w 20000
-          echo
-          echo "SITIO>>>"

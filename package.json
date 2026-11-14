@@ -1,0 +1,14 @@
+{
+  "name": "indec-dashboard",
+  "private": true,
+  "description": "Construye el explorador del sitio (DuckDB-WASM servido desde el propio sitio).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build-explorador.mjs"
+  },
+  "devDependencies": {
+    "@duckdb/duckdb-wasm": "1.32.0",
+    "esbuild": "0.25.12"
+  }
+}
