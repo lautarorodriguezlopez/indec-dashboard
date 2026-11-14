@@ -32,6 +32,10 @@ jobs:
         run: |
           python ingesta/sitio.py
           echo "<<<SITIO"
-          gzip -c site/data/tableros.json | base64 -w 0
+          tar -czf - site/data site/datos/ipc.parquet site/datos/salarios.parquet site/datos/canastas.parquet \
+            site/datos/emae.parquet site/datos/pobreza.parquet site/datos/mercado_trabajo.parquet \
+            site/datos/poblacion_nacional.parquet site/datos/poblacion_jurisdiccion.parquet \
+            site/datos/canasta_crianza.parquet site/datos/comex_nomenclaturas.parquet \
+            site/datos/importaciones.parquet | base64 -w 0
           echo
           echo "SITIO>>>"

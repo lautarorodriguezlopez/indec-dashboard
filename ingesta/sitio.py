@@ -314,6 +314,114 @@ def semaforo(pr: dict, bo: dict, pu: dict) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------ explorador
+# Metadatos para el explorador del sitio. El navegador solo arma consultas
+# con las tablas y columnas que figuran acá (lista blanca).
+
+ETIQUETAS = {
+    "region": "Región", "descripcion": "Descripción", "codigo": "Código", "nivel": "Nivel",
+    "clasificador": "Clasificador", "tipo_de_indicador": "Tipo de indicador",
+    "tipo_de_indicador_descripcion": "Indicador", "unidad_de_medida": "Unidad", "valor": "Valor",
+    "serie": "Serie", "indicador": "Índice", "operativo": "Operativo", "origen": "Origen",
+    "inciso": "Inciso", "descripcion_inciso": "Inciso (descripción)", "codigo_apertura": "Código de apertura",
+    "area_geografica_nom": "Área geográfica", "sexo_nom": "Sexo", "edad": "Edad", "edad_nom": "Edad",
+    "jurisdiccion_nom": "Provincia", "departamento_nom": "Departamento", "rmba": "Región Metropolitana (1 = sí)",
+    "poblacion": "Población", "pais": "País", "rubro": "Rubro", "subrubro": "Subrubro",
+    "uso_economico": "Uso económico", "gce": "Grandes categorías económicas",
+    "valor_fob": "Valor FOB (US$)", "valor_cif": "Valor CIF (US$)", "peso_neto": "Peso neto (kg)",
+    "observaciones": "Observaciones", "nombre_columna": "Columna", "codigo_descripcion": "Descripción del código",
+    "tasa_pobreza_hogares": "Pobreza (% hogares)", "tasa_pobreza_personas": "Pobreza (% personas)",
+    "tasa_indigencia_hogares": "Indigencia (% hogares)", "tasa_indigencia_personas": "Indigencia (% personas)",
+    "tasa_de_actividad": "Tasa de actividad", "tasa_de_empleo": "Tasa de empleo",
+    "tasa_de_empleo_formal": "Empleo formal", "tasa_de_empleo_informal": "Empleo informal",
+    "tasa_de_desocupacion": "Desocupación", "tasa_de_ocupacion_demandante": "Ocupados demandantes",
+    "tasa_de_subocupacion": "Subocupación", "tasa_de_subocupacion_demandante": "Subocupación demandante",
+    "tasa_de_subocupacion_no_demandante": "Subocupación no demandante",
+}
+EDADES = {"men1": "menos de 1 año", "1a3": "1 a 3 años", "4a5": "4 a 5 años", "6a12": "6 a 12 años"}
+PARTES = {"bys": "Bienes y servicios", "cuid": "Cuidado", "tot": "Total"}
+OCULTAS = {"periodo", "cuadro_web", "anio", "mes", "trimestre", "semestre", "fecha", "area_geografica_cod",
+           "sexo_cod", "edad_cod", "jurisdiccion_cod", "departamento_cod", "rubro_cod", "subrubro_cod",
+           "pais_cod", "uso_economico_cod", "gce_cod"}
+SUMABLES = {"valor_fob", "valor_cif", "peso_neto", "poblacion"}
+COMEX_NOMBRES = {
+    "exportaciones": {"rubro_cod": "rubro", "subrubro_cod": "subrubro", "pais_cod": "pais"},
+    "importaciones": {"uso_economico_cod": "uso_economico", "gce_cod": "gce", "pais_cod": "pais"},
+}
+
+
+def etiqueta(col: str) -> str:
+    if col in ETIQUETAS:
+        return ETIQUETAS[col]
+    parte, _, edad = col.partition("_")
+    if parte in PARTES and edad in EDADES:
+        return f"{PARTES[parte]} · {EDADES[edad]}"
+    return col.replace("_", " ").capitalize()
+
+
+def explorador(estado: dict) -> None:
+    descargas = SITIO / "datos"
+    nom = leer("comex_nomenclaturas")
+    tablas = []
+    for s in estado["servicios"]:
+        tabla = s["tabla"]
+        if not (DIR / f"{tabla}.parquet").exists():
+            continue
+        df = leer(tabla)
+        # Comercio exterior: agrega nombres legibles a los códigos
+        if tabla in COMEX_NOMBRES:
+            for cod, nombre in COMEX_NOMBRES[tabla].items():
+                m = nom[nom["nombre_columna"] == cod].drop_duplicates("codigo").set_index("codigo")["codigo_descripcion"]
+                df[nombre] = df[cod].map(m).fillna(df[cod])
+            df.to_parquet(descargas / f"{tabla}.parquet", index=False)
+
+        cols = set(df.columns)
+        if {"anio", "mes"} <= cols:
+            tiempo = "mes"
+        elif {"anio", "trimestre"} <= cols:
+            tiempo = "trimestre"
+        elif {"anio", "semestre"} <= cols:
+            tiempo = "semestre"
+        elif "fecha" in cols:
+            tiempo = "fecha"
+        else:
+            tiempo = None
+        anios = None
+        if tiempo == "fecha":
+            f = pd.to_numeric(df["fecha"], errors="coerce").dropna()
+            anios = [int(f.min()), int(f.max())]
+        elif tiempo:
+            anios = [int(df["anio"].min()), int(df["anio"].max())]
+
+        dims, medidas, visibles = [], [], []
+        for c in df.columns:
+            if c.endswith("_null") or c in OCULTAS:
+                continue
+            visibles.append(c)
+            s_ = df[c]
+            if c == "edad" or not pd.api.types.is_numeric_dtype(s_):
+                if c == "observaciones":
+                    continue
+                vals = sorted(s_.dropna().astype(str).unique().tolist(), key=lambda v: (len(v) if c == "edad" else 0, v))
+                if 2 <= len(vals) <= 600:
+                    dims.append({"col": c, "label": etiqueta(c), "valores": vals, "numerica": c == "edad"})
+            else:
+                medidas.append({"col": c, "label": etiqueta(c), "sumable": c in SUMABLES})
+        tablas.append({
+            "tabla": tabla,
+            "titulo": s.get("descripcion") or tabla,
+            "filas": int(len(df)),
+            "ultimo_periodo": s.get("ultimo_periodo"),
+            "tiempo": tiempo,
+            "anios": anios,
+            "dims": dims,
+            "medidas": medidas,
+            "columnas": [{"col": c, "label": etiqueta(c)} for c in visibles],
+        })
+    (SALIDA / "explorador.json").write_text(json.dumps({"tablas": tablas}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"explorador.json: {len(tablas)} tablas")
+
+
 def main() -> None:
     SALIDA.mkdir(parents=True, exist_ok=True)
     estado = json.loads((DIR / "estado.json").read_text(encoding="utf-8"))
@@ -342,6 +450,7 @@ def main() -> None:
     descargas.mkdir(exist_ok=True)
     for f in DIR.glob("*.parquet"):
         shutil.copy2(f, descargas / f.name)
+    explorador(estado)
 
     tam = (SALIDA / "tableros.json").stat().st_size
     print(f"tableros.json {tam/1024:.0f} KB · semáforo: {len(tableros['semaforo'])} indicadores")
