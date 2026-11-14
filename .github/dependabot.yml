@@ -1,0 +1,12 @@
+# Avisa con un pull request cuando hay versiones nuevas (o parches de
+# seguridad) de las acciones de GitHub y de las librerías de Python.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly

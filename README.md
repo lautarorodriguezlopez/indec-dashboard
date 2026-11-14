@@ -46,3 +46,7 @@ La prueba baja IPC, EMAE e índice de salarios desde 2023. Los guarda en `data/i
 ## Correrla en GitHub
 
 Pestaña **Actions** → **Prueba de ingesta INDEC** → **Run workflow**. Usa el secreto `INDEC_API_TOKEN` del repo, y los resultados quedan como artifact durante 7 días.
+
+## Licencia
+
+El código está bajo licencia [MIT](LICENSE). Los datos son del INDEC: se pueden reutilizar citando la fuente.

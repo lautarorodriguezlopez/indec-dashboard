@@ -53,9 +53,11 @@ jobs:
 
       - name: Elegir modo
         id: modo
+        env:
+          COMPLETA: ${{ inputs.completa }}
         run: |
           # Completa si se pidió a mano, si no hay datos previos o si es el primer lunes del mes
-          if [ "${{ inputs.completa }}" = "true" ] || [ ! -f data/parquet/estado.json ] \
+          if [ "$COMPLETA" = "true" ] || [ ! -f data/parquet/estado.json ] \
              || { [ "$(date -u +%d)" -le 7 ] && [ "$(date -u +%u)" -eq 1 ]; }; then
             echo "flag=--completa" >> "$GITHUB_OUTPUT"
           else

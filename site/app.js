@@ -11,6 +11,8 @@
   let C = null; // catalogo.json
 
   // ---------------------------------------------------------------- formato
+  // Todo texto que viene de los datos pasa por esc() antes de ir a innerHTML.
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const num = (v, d = 1) =>
     v == null || Number.isNaN(v) ? "—" : v.toLocaleString("es-AR", { minimumFractionDigits: d, maximumFractionDigits: d });
   const signo = (v, d = 1) => (v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + num(Math.abs(v), d));
@@ -93,7 +95,7 @@
     if (series.length < 2) return;
     const l = document.createElement("div");
     l.className = "leyenda";
-    l.innerHTML = series.map((s) => `<span><i style="background:${s.color}"></i>${s.nombre}</span>`).join("");
+    l.innerHTML = series.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.nombre)}</span>`).join("");
     fig.appendChild(l);
   }
   function tablaDatos(fig, p, series, fmt, max = 24) {
@@ -102,11 +104,11 @@
     const desde = Math.max(0, p.length - max);
     const filas = p.slice(desde).map((x, j) => {
       const i = desde + j;
-      return `<tr><td>${fmtP(x)}</td>${series.map((s) => `<td>${fmt(s.valores[i])}</td>`).join("")}</tr>`;
+      return `<tr><td>${esc(fmtP(x))}</td>${series.map((s) => `<td>${fmt(s.valores[i])}</td>`).join("")}</tr>`;
     }).reverse();
     det.innerHTML = `<summary>Ver tabla${p.length > max ? ` (últimos ${max} períodos)` : ""}</summary>
       <div class="tabla-wrap"><table class="tabla"><thead><tr><th>Período</th>${series
-        .map((s) => `<th>${s.nombre}</th>`).join("")}</tr></thead><tbody>${filas.join("")}</tbody></table></div>`;
+        .map((s) => `<th>${esc(s.nombre)}</th>`).join("")}</tr></thead><tbody>${filas.join("")}</tbody></table></div>`;
     fig.appendChild(det);
   }
   function nota(fig, texto) {
@@ -194,8 +196,8 @@
         if (v == null) { puntos[k].setAttribute("visibility", "hidden"); return; }
         puntos[k].setAttribute("cx", x(i)); puntos[k].setAttribute("cy", y(v)); puntos[k].setAttribute("visibility", "visible");
       });
-      mostrarTip(`<div class="tt-t">${fmtP(p[i])}</div>` + series.map((s) =>
-        `<div class="tt-r"><span><i style="background:${s.color}"></i>${s.nombre}</span><b>${fmt(s.valores[i])}</b></div>`).join(""), ev);
+      mostrarTip(`<div class="tt-t">${esc(fmtP(p[i]))}</div>` + series.map((s) =>
+        `<div class="tt-r"><span><i style="background:${s.color}"></i>${esc(s.nombre)}</span><b>${fmt(s.valores[i])}</b></div>`).join(""), ev);
     };
     capa.addEventListener("pointermove", mover);
     capa.addEventListener("pointerdown", mover);
@@ -233,8 +235,8 @@
       const v = el("text", { class: "val", x: d.valor >= 0 ? x1 + 6 : x0 - 6, y: yc + 4, "text-anchor": d.valor >= 0 ? "start" : "end" }, svg);
       v.textContent = fmt(d.valor);
       const hit = el("rect", { x: 0, y: yc - fila / 2, width: W, height: fila, fill: "transparent" }, svg);
-      const ver = (ev) => mostrarTip(`<div class="tt-t">${d.etiqueta}</div><div class="tt-r"><span>${cfg.serie || "Valor"}</span><b>${fmt(d.valor)}</b></div>`
-        + (d.extra ? `<div class="tt-r"><span>${d.extra[0]}</span><b>${d.extra[1]}</b></div>` : ""), ev);
+      const ver = (ev) => mostrarTip(`<div class="tt-t">${esc(d.etiqueta)}</div><div class="tt-r"><span>${esc(cfg.serie || "Valor")}</span><b>${fmt(d.valor)}</b></div>`
+        + (d.extra ? `<div class="tt-r"><span>${esc(d.extra[0])}</span><b>${esc(d.extra[1])}</b></div>` : ""), ev);
       hit.addEventListener("pointermove", ver);
       hit.addEventListener("pointerdown", ver);
       hit.addEventListener("pointerleave", ocultarTip);
@@ -246,7 +248,7 @@
   // ---------------------------------------------------------------- KPIs
   function kpis(cont, lista) {
     cont.innerHTML = lista.map((k) =>
-      `<div class="kpi"><div class="t">${k.t}</div><div class="v">${k.v}</div><div class="d">${k.d || ""}</div></div>`).join("");
+      `<div class="kpi"><div class="t">${esc(k.t)}</div><div class="v">${k.v}</div><div class="d">${k.d || ""}</div></div>`).join("");
   }
   const ultimo = (p, v) => {
     for (let i = v.length - 1; i >= 0; i--) if (v[i] != null) return { p: p[i], v: v[i], i };
@@ -262,12 +264,12 @@
       if (s.unidad === "%") { valor = num(s.valor) + " %"; delta = `${signo(s.delta, 1)} pp`; }
       else if (s.unidad === "millones de USD") { valor = "US$ " + num(s.valor, 0) + " M"; delta = `${signo(s.delta, 0)} M`; }
       else { valor = num(s.valor, 1); delta = `${signo(s.delta, 1)} %`; }
-      const [ic, tx] = ETQ[s.estado];
-      return `<article class="sem ${s.estado}">
-        <div class="t">${s.indicador}</div>
+      const [ic, tx] = ETQ[s.estado] || ["", ""];
+      return `<article class="sem ${ETQ[s.estado] ? s.estado : ""}">
+        <div class="t">${esc(s.indicador)}</div>
         <div class="v">${valor}</div>
         <div class="estado">${ic} ${tx} · ${delta}</div>
-        <div class="r">${fmtP(s.periodo)} · ${s.texto_referencia}</div>
+        <div class="r">${esc(fmtP(s.periodo))} · ${esc(s.texto_referencia)}</div>
       </article>`;
     }).join("");
   }
@@ -392,11 +394,11 @@
     const t = document.getElementById("tabla-catalogo");
     t.innerHTML = `<thead><tr><th>Dataset</th><th>Último dato</th><th>Filas</th><th>Estado</th><th>Descargar</th></tr></thead><tbody>` +
       C.servicios.map((s) => `<tr>
-        <td class="wrap"><b>${s.descripcion}</b><br><span class="nota">${s.endpoint}</span></td>
-        <td>${fmtP(s.ultimo_periodo)}</td>
+        <td class="wrap"><b>${esc(s.descripcion)}</b><br><span class="nota">${esc(s.endpoint)}</span></td>
+        <td>${esc(fmtP(s.ultimo_periodo))}</td>
         <td>${s.filas != null ? s.filas.toLocaleString("es-AR") : "—"}</td>
-        <td>${s.ok ? '<span class="ok">✓ OK</span>' : `<span class="falla" title="${(s.error || "").replace(/"/g, "&quot;")}">✕ Falló</span>`}</td>
-        <td><a href="datos/${s.tabla}.parquet" download>${s.tabla}.parquet</a></td></tr>`).join("") + "</tbody>";
+        <td>${s.ok ? '<span class="ok">✓ OK</span>' : `<span class="falla" title="${esc(s.error)}">✕ Falló</span>`}</td>
+        <td><a href="datos/${encodeURIComponent(s.tabla)}.parquet" download>${esc(s.tabla)}.parquet</a></td></tr>`).join("") + "</tbody>";
   }
 
   const RENDER = { portada: renderPortada, precios: renderPrecios, bolsillo: renderBolsillo, actividad: renderActividad, catalogo: renderCatalogo };
@@ -412,7 +414,7 @@
       render();
     }));
     const sel = document.getElementById("region");
-    sel.innerHTML = T.precios.regiones.map((r) => `<option>${r}</option>`).join("");
+    sel.innerHTML = T.precios.regiones.map((r) => `<option>${esc(r)}</option>`).join("");
     sel.addEventListener("change", () => { estado.region = sel.value; render(); });
     document.querySelectorAll(".rango").forEach((g) => {
       const grupo = g.dataset.rangoGrupo;
@@ -449,6 +451,6 @@
       render();
     })
     .catch((e) => {
-      document.querySelector("main").innerHTML = `<p class="lead">No se pudieron cargar los datos (${e.message}).</p>`;
+      document.querySelector("main").innerHTML = `<p class="lead">No se pudieron cargar los datos (${esc(e.message)}).</p>`;
     });
 })();
