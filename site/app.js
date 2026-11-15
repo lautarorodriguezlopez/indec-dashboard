@@ -6,9 +6,10 @@
   const COL = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)"];
   const NS = "http://www.w3.org/2000/svg";
   const tip = document.getElementById("tooltip");
-  const estado = { tab: "portada", region: "Nacional", rango: { precios: "3", bolsillo: "todo", actividad: "3" } };
+  const estado = { tab: "portada", region: "Nacional", rango: { precios: "3", bolsillo: "todo", actividad: "3", mas: "3" } };
   let T = null; // tableros.json
   let C = null; // catalogo.json
+  let M = null; // mas.json (se baja recién al abrir la pestaña)
 
   // ---------------------------------------------------------------- formato
   // Todo texto que viene de los datos pasa por esc() antes de ir a innerHTML.
@@ -399,6 +400,85 @@
         <td>${s.filas != null ? s.filas.toLocaleString("es-AR") : "—"}</td>
         <td>${s.ok ? '<span class="ok">✓ OK</span>' : `<span class="falla" title="${esc(s.error)}">✕ Falló</span>`}</td>
         <td><a href="datos/${encodeURIComponent(s.tabla)}.parquet" download>${esc(s.tabla)}.parquet</a></td></tr>`).join("") + "</tbody>";
+    const X = C.series_extra;
+    const tx = document.getElementById("tabla-extra");
+    if (!X) { tx.replaceChildren(); return; }
+    document.getElementById("cat-extra-lead").textContent =
+      `${X.series_ok} de ${X.series_total} series actualizadas${X.atrasadas ? ` · ${X.atrasadas} atrasada(s)` : ""}. Todas se pueden filtrar y bajar desde el Explorador ("Más indicadores del INDEC").`;
+    tx.innerHTML = `<thead><tr><th>Serie</th><th>Grupo</th><th>Último dato</th><th>Estado</th><th>Fuente</th></tr></thead><tbody>` +
+      X.series.map((x) => `<tr>
+        <td class="wrap"><b>${esc(x.nombre)}</b><br><span class="nota">${esc(x.unidad)}</span></td>
+        <td>${esc(x.grupo)}</td>
+        <td>${esc(x.ultimo ? fmtP(String(x.ultimo).slice(0, 7)) : "—")}</td>
+        <td>${!x.ok ? '<span class="falla">✕ Falló</span>' : x.atrasada ? '<span class="atraso">● Atrasada</span>' : '<span class="ok">✓ Al día</span>'}</td>
+        <td><a href="https://apis.datos.gob.ar/series/api/series/?ids=${encodeURIComponent(x.id)}&amp;format=csv" rel="noopener noreferrer">CSV</a></td></tr>`).join("") + "</tbody>";
+  }
+
+  // ---------------------------------------------------------------- más indicadores
+  const pct = (v) => num(v) + " %";
+  function renderMas() {
+    if (!M) {
+      fetch("data/mas.json")
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then((m) => { M = m; if (estado.tab === "mas") renderMas(); })
+        .catch(() => { document.getElementById("mas-nota").textContent = "No se pudieron cargar estos indicadores. Recargá la página."; });
+      return;
+    }
+    const rango = estado.rango.mas;
+    const co = M.consumo, cn = M.construccion, ind = M.industria, tu = M.turismo, ma = M.macro, sv = M.servicios;
+    const pibU = ultimo(ma.pib_ia.p, ma.pib_ia.v);
+    kpis(document.getElementById("kpi-mas"), [
+      { t: "Ventas en supermercados", v: signo(co.kpi_super_v_ia.v) + " %", d: `interanual, a precios constantes · ${fmtP(co.kpi_super_v_ia.p)}` },
+      { t: "Construcción (ISAC)", v: signo(cn.kpi_isac_v_ia.v) + " %", d: `interanual · ${fmtP(cn.kpi_isac_v_ia.p)}` },
+      { t: "Capacidad instalada industrial", v: pct(ind.kpi.v), d: `${signo(ind.kpi.pp_ia)} pp en 12 meses · ${fmtP(ind.kpi.p)}` },
+      { t: "PIB", v: signo(pibU.v) + " %", d: `interanual · ${fmtP(pibU.p)}` },
+    ]);
+    const ser = (bloque) => Object.keys(bloque.series).map((n) => ({ nombre: n, valores: bloque.series[n] }));
+    lineas(document.getElementById("c-consumo"), {
+      titulo: "Ventas a precios constantes", desc: "Índice 2017 = 100, series desestacionalizadas. Por debajo de 100 se vende menos que en 2017.",
+      p: co.real.p, series: ser(co.real), rango, fmt: (v) => num(v),
+    });
+    lineas(document.getElementById("c-pagos"), {
+      titulo: "Cómo se paga en el súper", desc: "% de las ventas de supermercados por medio de pago.",
+      p: co.pagos.p, series: ser(co.pagos), rango, cero: true, fmt: pct,
+    });
+    lineas(document.getElementById("c-online"), {
+      titulo: "Ventas online en supermercados", desc: "% de las ventas que se hacen por canales online.",
+      p: co.online.p, series: [{ nombre: "Online", valores: co.online.v }], rango, cero: true, fmt: pct,
+    });
+    lineas(document.getElementById("c-isac"), {
+      titulo: "Actividad de la construcción (ISAC)", desc: "Índice 2004 = 100, desestacionalizado.",
+      p: cn.isac.p, series: ser(cn.isac), rango, fmt: (v) => num(v),
+    });
+    barras(document.getElementById("c-insumos"), {
+      titulo: `Insumos de la construcción · ${fmtP(cn.insumos_periodo)}`, desc: "Variación % interanual de la demanda de cada insumo.",
+      serie: "Interanual", items: cn.insumos.map((x) => ({ etiqueta: x.insumo, valor: x.v_ia })), fmt: (v) => signo(v) + " %",
+    });
+    lineas(document.getElementById("c-ucii"), {
+      titulo: "Uso de la capacidad instalada", desc: "% de la capacidad de las fábricas que se está usando, por sector.",
+      p: ind.ucii.p, series: ser(ind.ucii), rango, fmt: pct,
+      nota: "La serie de sustancias y productos químicos está en el Explorador.",
+    });
+    lineas(document.getElementById("c-turismo"), {
+      titulo: "Turismo internacional", desc: "Miles de pasajeros por mes en Ezeiza y Aeroparque: los que llegan al país y los residentes que viajan al exterior.",
+      p: tu.flujos.p, series: ser(tu.flujos), rango, cero: true, fmt: (v) => num(v, 0) + " mil",
+    });
+    lineas(document.getElementById("c-pib"), {
+      titulo: "PIB", desc: "Variación % interanual del PIB a precios constantes, por trimestre.",
+      p: ma.pib_ia.p, series: [{ nombre: "PIB interanual", valores: ma.pib_ia.v }], rango: "todo", fmt: (v) => signo(v) + " %",
+    });
+    lineas(document.getElementById("c-gini"), {
+      titulo: "Desigualdad (coeficiente de Gini)", desc: "Ingreso per cápita familiar. 0 = igualdad total; 1 = máxima desigualdad.",
+      p: ma.gini.p, series: [{ nombre: "Gini", valores: ma.gini.v }], rango: "todo", fmt: (v) => num(v, 3), fmtEje: (v) => num(v, 2),
+    });
+    lineas(document.getElementById("c-issp"), {
+      titulo: "Servicios públicos", desc: "Índice de servicios públicos (transporte, peajes, telefonía, residuos y otros), tendencia-ciclo, 2004 = 100.",
+      p: sv.issp.p, series: ser(sv.issp), rango, fmt: (v) => num(v),
+    });
+    const atrasadas = [co, cn, ind, tu, ma, sv].flatMap((b) => b.fuentes).filter((f) => f.atrasada);
+    document.getElementById("mas-nota").textContent =
+      "Fuente: INDEC, vía la API de Series de Tiempo de datos.gob.ar. Algunas series llegan a datos.gob.ar con unas semanas de atraso respecto del informe del INDEC." +
+      (atrasadas.length ? ` Atención: ${atrasadas.length} serie(s) están atrasadas (${atrasadas.map((f) => f.nombre).join(", ")}).` : "");
   }
 
   // El explorador se carga recién cuando se abre (trae el motor DuckDB-WASM)
@@ -414,7 +494,7 @@
       });
   }
 
-  const RENDER = { portada: renderPortada, precios: renderPrecios, bolsillo: renderBolsillo, actividad: renderActividad, explorador: renderExplorador, catalogo: renderCatalogo };
+  const RENDER = { portada: renderPortada, precios: renderPrecios, bolsillo: renderBolsillo, actividad: renderActividad, mas: renderMas, explorador: renderExplorador, catalogo: renderCatalogo };
   const render = () => { ocultarTip(); RENDER[estado.tab](); };
 
   // Helpers que usa el explorador (módulo aparte)

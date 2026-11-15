@@ -28,6 +28,7 @@
       <button role="tab" aria-selected="false" data-tab="precios">Precios</button>
       <button role="tab" aria-selected="false" data-tab="bolsillo">Bolsillo</button>
       <button role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
+      <button role="tab" aria-selected="false" data-tab="mas">Más indicadores</button>
       <button role="tab" aria-selected="false" data-tab="explorador">Explorador</button>
       <button role="tab" aria-selected="false" data-tab="catalogo">Datos</button>
     </nav>
@@ -80,6 +81,36 @@
         </div>
       </section>
 
+      <section id="mas" class="panel" role="tabpanel" hidden>
+        <div class="filtros">
+          <div class="rango" data-rango-grupo="mas" role="group" aria-label="Período"></div>
+        </div>
+        <div id="kpi-mas" class="kpis"></div>
+        <h2 class="sec">Consumo</h2>
+        <div class="cards">
+          <figure class="card ancha" id="c-consumo"></figure>
+          <figure class="card" id="c-pagos"></figure>
+          <figure class="card" id="c-online"></figure>
+        </div>
+        <h2 class="sec">Construcción</h2>
+        <div class="cards">
+          <figure class="card" id="c-isac"></figure>
+          <figure class="card" id="c-insumos"></figure>
+        </div>
+        <h2 class="sec">Industria</h2>
+        <div class="cards"><figure class="card ancha" id="c-ucii"></figure></div>
+        <h2 class="sec">Turismo</h2>
+        <div class="cards"><figure class="card ancha" id="c-turismo"></figure></div>
+        <h2 class="sec">Macro</h2>
+        <div class="cards">
+          <figure class="card" id="c-pib"></figure>
+          <figure class="card" id="c-gini"></figure>
+        </div>
+        <h2 class="sec">Servicios públicos</h2>
+        <div class="cards"><figure class="card ancha" id="c-issp"></figure></div>
+        <p class="nota" id="mas-nota"></p>
+      </section>
+
       <section id="explorador" class="panel" role="tabpanel" hidden>
         <h2>Explorador de los 19 servicios</h2>
         <p class="lead">Elegí un dataset, filtralo, graficalo y bajá lo que necesites en CSV. Todo corre en tu navegador: no se envía nada a ningún servidor.</p>
@@ -106,6 +137,9 @@
         <h2>Los 19 servicios del Catálogo API-INDEC</h2>
         <p class="lead" id="cat-lead"></p>
         <div class="tabla-wrap"><table id="tabla-catalogo" class="tabla"></table></div>
+        <h2 class="sec">Más indicadores del INDEC (vía datos.gob.ar)</h2>
+        <p class="lead" id="cat-extra-lead"></p>
+        <div class="tabla-wrap"><table id="tabla-extra" class="tabla"></table></div>
         <p class="nota">Los archivos están en formato Parquet: se abren con Python (pandas), R, DuckDB o Power BI.</p>
       </section>
     </main>
