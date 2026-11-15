@@ -650,11 +650,24 @@ def mas(estado_series: dict | None) -> dict | None:
             real = (pr / ipc.reindex(pr.index) * ipc.iloc[-1]).dropna()
             acum = (real.rolling(12).sum() / 1e6).dropna()
             acum = acum[acum.index >= "2018-01"]
+        # Recaudación real: variación interanual descontando la inflación (la serie viene como fracción)
+        rec_real = None
+        if len(rec) and ipc is not None:
+            ipc_ia = (ipc / ipc.shift(12) - 1).dropna()
+            comun = rec.index.intersection(ipc_ia.index)
+            rec_real = ((1 + rec[comun]) / (1 + ipc_ia[comun]) - 1) * 100
+            rec_real = rec_real[rec_real.index >= "2018-01"].sort_index()
+        recn = rec[rec.index >= "2018-01"] * 100
         fiscal = {
-            "recaudacion_ia": {"p": rec[rec.index >= "2018-01"].index.tolist(), "v": [limpio(x) for x in rec[rec.index >= "2018-01"]]},
+            "recaudacion": _alinear(pd.DataFrame({"clave": ["n"] * len(recn) + (["r"] * len(rec_real) if rec_real is not None else []),
+                                                  "fecha": list(recn.index) + (list(rec_real.index) if rec_real is not None else []),
+                                                  "p": list(recn.index) + (list(rec_real.index) if rec_real is not None else []),
+                                                  "valor": list(recn.values) + (list(rec_real.values) if rec_real is not None else [])}),
+                                    {"r": "Real (descontada la inflación)", "n": "Nominal"}),
             "primario": {"p": prim[prim.index >= "2018-01"].index.tolist(), "v": [limpio(x / 1e3) for x in prim[prim.index >= "2018-01"]]},
             "primario_12m": {"p": acum.index.tolist(), "v": [limpio(x) for x in acum]} if acum is not None else None,
-            "kpi_rec": {"p": rec.index[-1] if len(rec) else None, "v": limpio(rec.iloc[-1]) if len(rec) else None},
+            "kpi_rec": {"p": rec_real.index[-1] if rec_real is not None and len(rec_real) else None,
+                        "v": limpio(rec_real.iloc[-1]) if rec_real is not None and len(rec_real) else None},
             "kpi_prim": {"p": prim.index[-1] if len(prim) else None, "v": limpio(prim.iloc[-1] / 1e3) if len(prim) else None},
             "fuentes": info("recaudacion", "recaudacion_ia", "resultado_primario"),
         }
@@ -706,6 +719,13 @@ def bcra() -> dict | None:
         return {"p": [x.strftime("%Y-%m-%d") for x in piv.index],
                 "series": {c: [limpio(x) for x in piv[c]] for c in piv.columns}}
 
+    def mensual(clave: str, nombre: str) -> dict:
+        s = diaria(clave).dropna()
+        s = s[s.index >= "2018-01-01"]
+        s.index = pd.DatetimeIndex(s.index).strftime("%Y-%m")
+        s = s[~s.index.duplicated(keep="last")]
+        return {"p": s.index.tolist(), "series": {nombre: [limpio(x) for x in s.values]}}
+
     def kpi(clave: str, dias_comp: int = 365) -> dict:
         s = diaria(clave).dropna()
         if not len(s):
@@ -741,7 +761,7 @@ def bcra() -> dict | None:
                           "tasa_personales": "Préstamos personales"}),
         "m2": semanal({"m2_privado_ia": "M2 privado"}),
         "credito": credito,
-        "expectativas": semanal({"inflacion_esperada": "Inflación esperada a 12 meses"}, desde="2018-01-01"),
+        "expectativas": mensual("inflacion_esperada", "Inflación esperada a 12 meses"),
         "indices": semanal({"uva": "UVA", "icl": "ICL"}, desde="2020-07-01"),
         "kpi": {c: kpi(c) for c in ("tc_mayorista", "tc_minorista", "reservas", "badlar", "tasa_plazo_fijo",
                                     "inflacion_esperada", "banda_techo", "uva")},

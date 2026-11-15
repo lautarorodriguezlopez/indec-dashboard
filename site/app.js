@@ -457,6 +457,7 @@
       ...(cn.kpi_permisos_v_ia ? [{ t: "Permisos de edificación", v: signo(cn.kpi_permisos_v_ia.v) + " %", d: `superficie autorizada, interanual · ${fmtP(cn.kpi_permisos_v_ia.p)}` }] : []),
       ...(M.empleo ? [{ t: "Trabajadores registrados", v: num(M.empleo.kpi.v / 1000, 2) + " M", d: `${signo(M.empleo.kpi.dif_ia, 0)} mil en 12 meses · ${fmtP(M.empleo.kpi.p)}` }] : []),
       ...(M.ingresos && M.ingresos.kpi.RIPTE ? [{ t: "Salario promedio real (RIPTE)", v: signo(M.ingresos.kpi.RIPTE.v_ia) + " %", d: `en 12 meses · ${fmtP(M.ingresos.kpi.RIPTE.p)}` }] : []),
+      ...(M.fiscal && M.fiscal.kpi_rec.v != null ? [{ t: "Recaudación real", v: signo(M.fiscal.kpi_rec.v) + " %", d: `interanual, descontada la inflación · ${fmtP(M.fiscal.kpi_rec.p)}` }] : []),
       ...(M.fiscal && M.fiscal.kpi_prim.v != null ? [{ t: "Resultado primario del mes", v: (M.fiscal.kpi_prim.v < 0 ? "−" : "") + "$ " + num(Math.abs(M.fiscal.kpi_prim.v) / 1000, 2) + " billones", d: `Sector Público Nacional · ${fmtP(M.fiscal.kpi_prim.p)}` }] : []),
       ...(ex ? [{ t: "Deuda externa bruta", v: "USD " + num(ex.kpi_deuda.v, 1) + " mil M", d: `${signo(ex.kpi_deuda.v_ia)} mil M en 12 meses · ${fmtP(ex.kpi_deuda.p)}` }] : []),
     ]);
@@ -478,6 +479,7 @@
       lineas(document.getElementById("c-sipa"), {
         titulo: "Trabajadores registrados", desc: "Miles de personas con empleo registrado (asalariados, monotributistas, autónomos y casas particulares), desestacionalizado.",
         p: em.total.p, series: ser(em.total), rango, fmt: (v) => num(v, 0) + " mil", fmtEje: (v) => num(v, 0),
+        nota: "El total también incluye autónomos, monotributo social y trabajadoras de casas particulares, que no se muestran en el gráfico por tipo.",
       });
       lineas(document.getElementById("c-sipa-comp"), {
         titulo: "Por tipo de trabajo", desc: "Miles de personas. Asalariados privados y monotributistas con estacionalidad; públicos desestacionalizados.",
@@ -497,9 +499,9 @@
         fmt: (v) => "$ " + num(v, 1) + " billones", fmtEje: (v) => num(v, 0),
       });
       lineas(document.getElementById("c-recaudacion"), {
-        titulo: "Recaudación tributaria", desc: "Variación % interanual de la recaudación total (nominal, en pesos corrientes).",
-        p: fi.recaudacion_ia.p, series: [{ nombre: "Recaudación interanual", valores: fi.recaudacion_ia.v }], rango, cero: true, fmt: (v) => signo(v) + " %",
-        nota: "Es una variación nominal: para saber si crece en términos reales hay que compararla con la inflación interanual de la pestaña Precios.",
+        titulo: "Recaudación tributaria real", desc: "Variación % interanual de la recaudación total, descontada la inflación del IPC nacional. Positivo: el Estado recauda más que hace un año a valores de hoy.",
+        p: fi.recaudacion.p, series: [{ nombre: "Recaudación real", valores: fi.recaudacion.series["Real (descontada la inflación)"] }], rango, cero: true, fmt: (v) => signo(v) + " %",
+        nota: (() => { const n = ultimo(fi.recaudacion.p, fi.recaudacion.series.Nominal); return n.v != null ? `En pesos corrientes, la recaudación de ${fmtP(n.p)} creció ${signo(n.v)} % interanual.` : ""; })(),
       });
     }
     lineas(document.getElementById("c-isac"), {
@@ -603,7 +605,7 @@
     });
     lineas(document.getElementById("c-expectativas"), {
       titulo: "Inflación esperada", desc: "Mediana del Relevamiento de Expectativas de Mercado (REM): % de inflación que esperan los analistas para los próximos 12 meses.",
-      p: D.expectativas.p.map((x) => x.slice(0, 7)), series: ser(D.expectativas), rango, cero: true, fmt: (v) => num(v) + " %",
+      p: D.expectativas.p, series: ser(D.expectativas), rango, cero: true, fmt: (v) => num(v) + " %",
     });
     lineas(document.getElementById("c-m2"), {
       titulo: "Cantidad de dinero (M2 privado)", desc: "Variación % interanual del promedio de 30 días: efectivo más cuentas a la vista del sector privado.",

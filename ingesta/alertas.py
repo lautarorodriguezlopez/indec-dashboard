@@ -54,6 +54,17 @@ if archivo_planillas.exists():
 else:
     problemas.append("no se generó estado_planillas.json (falló la lectura de planillas del INDEC)")
 
+archivo_bcra = DIR / "estado_bcra.json"
+if archivo_bcra.exists():
+    eb = json.loads(archivo_bcra.read_text(encoding="utf-8"))
+    for s in eb["series"]:
+        if not s.get("ok"):
+            problemas.append(f"BCRA {s['clave']} (id {s['id']}): {s.get('error')}")
+        elif s.get("atrasada"):
+            avisos.append(f"BCRA {s['clave']} sin dato nuevo: último {s.get('ultimo')} ({s.get('dias')} días)")
+else:
+    problemas.append("no se generó estado_bcra.json (falló la ingesta del BCRA)")
+
 for a in avisos:
     print(f"::warning::{a}")
 if avisos and date.today().weekday() == 0:  # lunes: resumen semanal por mail

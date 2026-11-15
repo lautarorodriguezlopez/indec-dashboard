@@ -69,9 +69,13 @@ jobs:
           INDEC_API_TOKEN: ${{ secrets.INDEC_API_TOKEN }}
         run: python ingesta/ingestar.py ${{ steps.modo.outputs.flag }}
 
-      - name: Bajar series de datos.gob.ar (consumo, construcción, industria, turismo, macro)
+      - name: Bajar series de datos.gob.ar (consumo, construcción, industria, turismo, macro, empleo, ingresos, fiscal)
         if: always()
         run: python ingesta/series_tiempo.py
+
+      - name: Bajar variables del BCRA (dólar, reservas, tasas, dinero, crédito)
+        if: always()
+        run: python ingesta/bcra.py
 
       - name: Leer planillas del INDEC (hoteles, permisos, confianza, balanza de pagos, deuda)
         if: always()
