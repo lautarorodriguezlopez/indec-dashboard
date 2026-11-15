@@ -69,6 +69,10 @@ jobs:
           INDEC_API_TOKEN: ${{ secrets.INDEC_API_TOKEN }}
         run: python ingesta/ingestar.py ${{ steps.modo.outputs.flag }}
 
+      - name: Bajar series de datos.gob.ar (consumo, construcción, industria, turismo, macro)
+        if: always()
+        run: python ingesta/series_tiempo.py
+
       - name: Guardar los datos en el release "datos"
         if: always() && hashFiles('data/parquet/estado.json') != ''
         run: |

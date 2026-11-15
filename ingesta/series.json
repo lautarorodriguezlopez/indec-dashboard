@@ -1,0 +1,38 @@
+{
+  "_nota": "Series del INDEC tomadas de la API de Series de Tiempo de datos.gob.ar (sin token). Validadas el 14/11/2026. Para agregar o corregir una serie, editar este archivo.",
+  "series": [
+    {"clave": "super_desest", "id": "455.1_VENTAS_PREADA_0_M_44_44", "grupo": "Consumo", "nombre": "Supermercados (desestacionalizada)", "unidad": "Índice 2017=100", "frecuencia": "M"},
+    {"clave": "super", "id": "455.1_VENTAS_PRENAL_0_M_34_10", "grupo": "Consumo", "nombre": "Supermercados (serie original)", "unidad": "Índice 2017=100", "frecuencia": "M"},
+    {"clave": "mayoristas_desest", "id": "456.1_VENTAS_PREADA_0_M_44_40", "grupo": "Consumo", "nombre": "Autoservicios mayoristas (desestacionalizada)", "unidad": "Índice 2017=100", "frecuencia": "M"},
+    {"clave": "shoppings_desest", "id": "458.1_VENTAS_TOTADA_0_M_52_56", "grupo": "Consumo", "nombre": "Centros de compras (desestacionalizada)", "unidad": "Índice 2017=100", "frecuencia": "M"},
+    {"clave": "pago_efectivo", "id": "455.1_EFECTIVOIVO_0_M_8_15", "grupo": "Consumo", "nombre": "Supermercados: pagos en efectivo", "unidad": "Miles de pesos", "frecuencia": "M"},
+    {"clave": "pago_debito", "id": "455.1_TARJETAS_DITO_0_M_15_92", "grupo": "Consumo", "nombre": "Supermercados: pagos con débito", "unidad": "Miles de pesos", "frecuencia": "M"},
+    {"clave": "pago_credito", "id": "455.1_TARJETAS_CITO_0_M_16_85", "grupo": "Consumo", "nombre": "Supermercados: pagos con crédito", "unidad": "Miles de pesos", "frecuencia": "M"},
+    {"clave": "pago_otros", "id": "455.1_OTROS_MEDIIOS_0_M_12_32", "grupo": "Consumo", "nombre": "Supermercados: otros medios de pago", "unidad": "Miles de pesos", "frecuencia": "M"},
+    {"clave": "canal_online", "id": "455.1_CANALES_ONINE_0_M_15_84", "grupo": "Consumo", "nombre": "Supermercados: ventas online", "unidad": "Miles de pesos", "frecuencia": "M"},
+    {"clave": "canal_salon", "id": "455.1_SALON_VENTTAS_0_M_12_82", "grupo": "Consumo", "nombre": "Supermercados: ventas en salón", "unidad": "Miles de pesos", "frecuencia": "M"},
+
+    {"clave": "isac_desest", "id": "33.2_ISAC_SIN_EDAD_0_M_23_56", "grupo": "Construcción", "nombre": "ISAC (desestacionalizado)", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "isac", "id": "33.2_ISAC_NIVELRAL_0_M_18_63", "grupo": "Construcción", "nombre": "ISAC (serie original)", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "ins_cemento", "id": "33.3_ISAC_CEMENAND_0_0_21_29", "grupo": "Construcción", "nombre": "Insumo: cemento", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "ins_hierro", "id": "33.3_ISAC_HIERRION_0_0_49_36", "grupo": "Construcción", "nombre": "Insumo: hierro redondo y acero", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "ins_ladrillos", "id": "33.3_ISAC_LADRICOS_0_0_21_27", "grupo": "Construcción", "nombre": "Insumo: ladrillos huecos", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "ins_pinturas", "id": "33.3_ISAC_PINTUION_0_0_31_13", "grupo": "Construcción", "nombre": "Insumo: pinturas", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "ins_asfalto", "id": "33.3_ISAC_ASFALLTO_0_0_12_97", "grupo": "Construcción", "nombre": "Insumo: asfalto", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "ins_hormigon", "id": "33.3_ISAC_HORMIADO_0_0_23_36", "grupo": "Construcción", "nombre": "Insumo: hormigón elaborado", "unidad": "Índice 2004=100", "frecuencia": "M"},
+
+    {"clave": "ucii", "id": "31.3_UNG_2004_M_18", "grupo": "Industria", "nombre": "Capacidad instalada: nivel general", "unidad": "Porcentaje", "frecuencia": "M"},
+    {"clave": "ucii_autos", "id": "31.3_UV_2004_M_25", "grupo": "Industria", "nombre": "Capacidad instalada: vehículos automotores", "unidad": "Porcentaje", "frecuencia": "M"},
+    {"clave": "ucii_metales", "id": "31.3_UIMB_2004_M_33", "grupo": "Industria", "nombre": "Capacidad instalada: metales básicos", "unidad": "Porcentaje", "frecuencia": "M"},
+    {"clave": "ucii_textil", "id": "31.3_UPT_2004_M_23", "grupo": "Industria", "nombre": "Capacidad instalada: productos textiles", "unidad": "Porcentaje", "frecuencia": "M"},
+    {"clave": "ucii_quimicos", "id": "31.3_USPQ_2004_M_34", "grupo": "Industria", "nombre": "Capacidad instalada: sustancias y productos químicos", "unidad": "Porcentaje", "frecuencia": "M"},
+
+    {"clave": "tur_receptivo", "id": "322.3_TURISMO_REIVO__17", "grupo": "Turismo", "nombre": "Turistas que llegan (Ezeiza y Aeroparque)", "unidad": "Miles de pasajeros", "frecuencia": "M"},
+    {"clave": "tur_emisivo", "id": "322.3_TURISMO_EMIVO__15", "grupo": "Turismo", "nombre": "Turistas que viajan al exterior (Ezeiza y Aeroparque)", "unidad": "Miles de pasajeros", "frecuencia": "M"},
+
+    {"clave": "pib", "id": "4.2_OGP_2004_T_17", "grupo": "Macro", "nombre": "PIB a precios constantes", "unidad": "Millones de pesos de 2004", "frecuencia": "T"},
+    {"clave": "gini", "id": "65.1_CGI_0_0_21", "grupo": "Macro", "nombre": "Coeficiente de Gini (ingreso per cápita familiar)", "unidad": "Coeficiente (0 a 1)", "frecuencia": "T"},
+
+    {"clave": "issp", "id": "302.3_S_TENDENCIRAL_0_S_28", "grupo": "Servicios públicos", "nombre": "Servicios públicos: nivel general (tendencia-ciclo)", "unidad": "Índice 2004=100", "frecuencia": "M"}
+  ]
+}

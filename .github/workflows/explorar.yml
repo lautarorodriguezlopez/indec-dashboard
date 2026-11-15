@@ -27,3 +27,9 @@ jobs:
           python ingesta/explorar.py | gzip -c | base64 -w 0
           echo
           echo "EXPLORAR>>>"
+      - name: Series extra
+        run: |
+          gh release download datos -D extra --pattern "series_extra.parquet" --pattern "estado_series.json" || true
+          echo "<<<EXTRA"
+          tar -czf - extra | base64 -w 20000
+          echo "EXTRA>>>"

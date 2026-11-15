@@ -451,6 +451,7 @@ def explorador(estado: dict) -> None:
             "medidas": medidas,
             "columnas": [{"col": c, "label": etiqueta(c)} for c in visibles],
         })
+    explorador_extra(tablas)
     # Base DuckDB nativa para el explorador: el navegador la lee por rangos HTTP
     # sin extensiones ni descargas de terceros. Formato compatible con DuckDB-WASM.
     escribir_base(descargas, tablas)
@@ -458,9 +459,194 @@ def explorador(estado: dict) -> None:
     print(f"explorador.json: {len(tablas)} tablas")
 
 
+# ----------------------------------------------------------- más indicadores
+# Series de datos.gob.ar (ingesta/series_tiempo.py). Si no están, la sección no se arma.
+
+def _extra() -> pd.DataFrame | None:
+    archivo = DIR / "series_extra.parquet"
+    if not archivo.exists():
+        return None
+    df = pd.read_parquet(archivo)
+    df["fecha"] = pd.to_datetime(df["fecha"])
+    trimestral = df["frecuencia"] == "T"
+    df["p"] = df["fecha"].dt.strftime("%Y-%m")
+    df.loc[trimestral, "p"] = df.loc[trimestral, "fecha"].dt.year.astype(str) + "-T" + ((df.loc[trimestral, "fecha"].dt.month - 1) // 3 + 1).astype(str)
+    return df
+
+
+def _serie(df: pd.DataFrame, clave: str) -> pd.Series:
+    d = df[df["clave"] == clave].sort_values("fecha")
+    return pd.Series(d["valor"].values, index=d["p"].values)
+
+
+def _alinear(df: pd.DataFrame, claves: dict[str, str], desde: str | None = None) -> dict:
+    piv = pd.DataFrame({nombre: _serie(df, clave) for clave, nombre in claves.items()}).sort_index()
+    if desde:
+        piv = piv[piv.index >= desde]
+    return {"p": piv.index.tolist(), "series": {c: [limpio(x) for x in piv[c]] for c in piv.columns}}
+
+
+def _var(s: pd.Series, n: int) -> tuple[str | None, float | None]:
+    s = s.dropna()
+    if len(s) <= n:
+        return None, None
+    return s.index[-1], limpio((s.iloc[-1] / s.iloc[-1 - n] - 1) * 100)
+
+
+def mas(estado_series: dict | None) -> dict | None:
+    df = _extra()
+    if df is None or df.empty:
+        return None
+    est = {s["clave"]: s for s in (estado_series or {}).get("series", [])}
+
+    def info(*claves):
+        return [{"clave": c, "nombre": est.get(c, {}).get("nombre", c), "ultimo": est.get(c, {}).get("ultimo"),
+                 "atrasada": bool(est.get(c, {}).get("atrasada"))} for c in claves]
+
+    # Consumo
+    pagos = {"pago_efectivo": "Efectivo", "pago_debito": "Débito", "pago_credito": "Crédito", "pago_otros": "Otros medios"}
+    piv = pd.DataFrame({n: _serie(df, c) for c, n in pagos.items()}).dropna().sort_index()
+    piv = piv[piv.index >= "2017-01"]
+    cuotas = piv.div(piv.sum(axis=1), axis=0) * 100
+    online = (_serie(df, "canal_online") / (_serie(df, "canal_online") + _serie(df, "canal_salon")) * 100).dropna().sort_index()
+    p_sup, v_sup = _var(_serie(df, "super"), 12)
+    consumo = {
+        "real": _alinear(df, {"super_desest": "Supermercados", "mayoristas_desest": "Mayoristas", "shoppings_desest": "Shoppings"}),
+        "pagos": {"p": cuotas.index.tolist(), "series": {c: [limpio(x) for x in cuotas[c]] for c in cuotas.columns}},
+        "online": {"p": online.index.tolist(), "v": [limpio(x) for x in online.values]},
+        "kpi_super_v_ia": {"p": p_sup, "v": v_sup},
+        "fuentes": info("super_desest", "mayoristas_desest", "shoppings_desest", "pago_efectivo"),
+    }
+
+    # Construcción
+    insumos = {"ins_cemento": "Cemento", "ins_hierro": "Hierro y acero", "ins_ladrillos": "Ladrillos huecos",
+               "ins_pinturas": "Pinturas", "ins_asfalto": "Asfalto", "ins_hormigon": "Hormigón"}
+    barras = []
+    for c, n in insumos.items():
+        p, v = _var(_serie(df, c), 12)
+        if v is not None:
+            barras.append({"insumo": n, "v_ia": v, "p": p})
+    p_isac, v_isac = _var(_serie(df, "isac"), 12)
+    construccion = {
+        "isac": _alinear(df, {"isac_desest": "ISAC desestacionalizado"}),
+        "insumos": sorted(barras, key=lambda x: -x["v_ia"]),
+        "insumos_periodo": max((b["p"] for b in barras), default=None),
+        "kpi_isac_v_ia": {"p": p_isac, "v": v_isac},
+        "fuentes": info("isac_desest", "isac", *insumos),
+    }
+
+    # Industria (capacidad instalada)
+    ucii = _serie(df, "ucii").dropna()
+    industria = {
+        "ucii": _alinear(df, {"ucii": "Nivel general", "ucii_autos": "Automotores", "ucii_metales": "Metales básicos",
+                              "ucii_textil": "Textiles"}, desde="2016-01"),
+        "kpi": {"p": ucii.index[-1] if len(ucii) else None, "v": limpio(ucii.iloc[-1]) if len(ucii) else None,
+                "pp_ia": limpio(ucii.iloc[-1] - ucii.iloc[-13]) if len(ucii) > 12 else None},
+        "fuentes": info("ucii", "ucii_autos", "ucii_metales", "ucii_textil", "ucii_quimicos"),
+    }
+
+    # Turismo
+    rec, emi = _serie(df, "tur_receptivo"), _serie(df, "tur_emisivo")
+    comun = rec.index.intersection(emi.index)
+    turismo = {
+        "flujos": _alinear(df, {"tur_receptivo": "Llegan al país", "tur_emisivo": "Viajan al exterior"}, desde="2016-01"),
+        "kpi": {"p": comun[-1] if len(comun) else None,
+                "llegan": limpio(rec[comun[-1]]) if len(comun) else None,
+                "viajan": limpio(emi[comun[-1]]) if len(comun) else None},
+        "fuentes": info("tur_receptivo", "tur_emisivo"),
+    }
+
+    # Macro
+    pib = _serie(df, "pib").dropna()
+    pib_ia = ((pib / pib.shift(4) - 1) * 100).dropna()
+    pib_ia = pib_ia[pib_ia.index >= "2010"]
+    gini = _serie(df, "gini").dropna()
+    gini = gini[gini.index >= "2016"]
+    macro = {
+        "pib_ia": {"p": pib_ia.index.tolist(), "v": [limpio(x) for x in pib_ia.values]},
+        "gini": {"p": gini.index.tolist(), "v": [limpio(x) for x in gini.values]},
+        "fuentes": info("pib", "gini"),
+    }
+
+    # Servicios públicos
+    issp = _serie(df, "issp").dropna()
+    p_issp, v_issp = _var(issp, 12)
+    servicios = {
+        "issp": _alinear(df, {"issp": "Servicios públicos (tendencia-ciclo)"}, desde="2016-01"),
+        "kpi_v_ia": {"p": p_issp, "v": v_issp},
+        "fuentes": info("issp"),
+    }
+    return {"consumo": consumo, "construccion": construccion, "industria": industria,
+            "turismo": turismo, "macro": macro, "servicios": servicios}
+
+
+def semaforo_extra(m: dict | None) -> list[dict]:
+    if not m:
+        return []
+    out = []
+
+    def item(nombre, p, valor, ref, texto, delta, mejor_si_sube, umbral, unidad):
+        if valor is None or ref is None or p is None:
+            return
+        estado = "templado" if abs(delta) < umbral else ("bien" if (delta > 0) == mejor_si_sube else "mal")
+        out.append({"indicador": nombre, "periodo": p, "valor": round(valor, 2), "unidad": unidad,
+                    "referencia": round(ref, 2), "texto_referencia": texto, "delta": round(delta, 2), "estado": estado})
+
+    sup = m["consumo"]["real"]
+    vals = sup["series"].get("Supermercados", [])
+    ult, prom = var_vs_prom(vals)
+    if ult is not None:
+        p = [x for x, v in zip(sup["p"], vals) if v is not None][-1]
+        item("Consumo en supermercados", p, ult, prom, "frente al promedio de los 12 meses previos",
+             (ult / prom - 1) * 100, True, 1.0, "índice")
+    isac = m["construccion"]["isac"]
+    vals = isac["series"].get("ISAC desestacionalizado", [])
+    ult, prom = var_vs_prom(vals)
+    if ult is not None:
+        p = [x for x, v in zip(isac["p"], vals) if v is not None][-1]
+        item("Construcción (ISAC)", p, ult, prom, "frente al promedio de los 12 meses previos",
+             (ult / prom - 1) * 100, True, 1.0, "índice")
+    k = m["industria"]["kpi"]
+    if k["v"] is not None and k["pp_ia"] is not None:
+        item("Capacidad instalada industrial", k["p"], k["v"], k["v"] - k["pp_ia"], "frente al mismo mes del año anterior",
+             k["pp_ia"], True, 1.0, "%")
+    return out
+
+
+def explorador_extra(tablas: list[dict]) -> None:
+    """Agrega la tabla series_extra al explorador."""
+    archivo = SITIO / "datos" / "series_extra.parquet"
+    if not archivo.exists():
+        return
+    df = pd.read_parquet(archivo)
+    dims = []
+    for c, label in (("grupo", "Grupo"), ("nombre", "Serie"), ("unidad", "Unidad"), ("frecuencia", "Frecuencia")):
+        vals = sorted(df[c].dropna().astype(str).unique().tolist())
+        if len(vals) >= 2:
+            dims.append({"col": c, "label": label, "valores": vals, "numerica": False})
+    tablas.append({
+        "tabla": "series_extra",
+        "titulo": "Más indicadores del INDEC (consumo, construcción, industria, turismo, macro)",
+        "filas": int(len(df)),
+        "ultimo_periodo": pd.to_datetime(df["fecha"]).max().strftime("%Y-%m"),
+        "tiempo": "mes",
+        "anios": [int(df["anio"].min()), int(df["anio"].max())],
+        "dims": dims,
+        "medidas": [{"col": "valor", "label": "Valor", "sumable": False}],
+        "columnas": [{"col": "grupo", "label": "Grupo"}, {"col": "nombre", "label": "Serie"},
+                     {"col": "unidad", "label": "Unidad"}, {"col": "valor", "label": "Valor"}],
+    })
+
+
 def main() -> None:
     SALIDA.mkdir(parents=True, exist_ok=True)
     estado = json.loads((DIR / "estado.json").read_text(encoding="utf-8"))
+    archivo_es = DIR / "estado_series.json"
+    estado_series = json.loads(archivo_es.read_text(encoding="utf-8")) if archivo_es.exists() else None
+    m = mas(estado_series)
+    if m:
+        (SALIDA / "mas.json").write_text(json.dumps(m, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        print(f"mas.json {(SALIDA / 'mas.json').stat().st_size / 1024:.0f} KB")
 
     pr, bo, pu = precios(), bolsillo(), pulso()
     tableros = {
@@ -469,7 +655,7 @@ def main() -> None:
         "precios": pr,
         "bolsillo": bo,
         "pulso": pu,
-        "semaforo": semaforo(pr, bo, pu),
+        "semaforo": semaforo(pr, bo, pu) + semaforo_extra(m),
     }
     (SALIDA / "tableros.json").write_text(json.dumps(tableros, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
@@ -479,6 +665,12 @@ def main() -> None:
                                 "ultima_ingesta_ok", "dato_nuevo")}
         for s in estado["servicios"]
     ]
+    if estado_series:
+        catalogo["series_extra"] = {k: estado_series[k] for k in ("generado", "fuente", "series_ok", "series_total", "atrasadas")}
+        catalogo["series_extra"]["series"] = [
+            {k: x.get(k) for k in ("clave", "id", "grupo", "nombre", "unidad", "ok", "ultimo", "atrasada")}
+            for x in estado_series["series"]
+        ]
     (SALIDA / "catalogo.json").write_text(json.dumps(catalogo, ensure_ascii=False, indent=1), encoding="utf-8")
 
     # Parquet descargables desde el sitio (no se suben al repo, solo al deploy)
