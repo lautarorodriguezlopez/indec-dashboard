@@ -1,0 +1,24 @@
+name: Fase 2 (preview, rama fase2)
+
+on:
+  push:
+    branches: [fase2]
+
+permissions:
+  contents: read
+
+jobs:
+  rastrear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rastrear planillas del INDEC
+        run: |
+          python tools/rastrear_indec.py > planillas.json
+          echo "<<<RAST"
+          gzip -c planillas.json | base64 -w 20000
+          echo "RAST>>>"
