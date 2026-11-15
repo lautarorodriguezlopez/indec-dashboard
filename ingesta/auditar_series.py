@@ -15,6 +15,10 @@ import urllib.parse
 import urllib.request
 
 API = "https://apis.datos.gob.ar/series/api"
+HEADERS = {
+    "User-Agent": "indec-dashboard/1.0 (+https://github.com/lautarorodriguezlopez/indec-dashboard)",
+    "Accept": "application/json",
+}
 GRUPOS = {
     "consumo": ["supermercados ventas", "autoservicios mayoristas", "centros de compras ventas"],
     "construccion": ["ISAC construccion", "indicador sintetico actividad construccion", "permisos de edificacion", "insumos construccion"],
@@ -27,7 +31,8 @@ GRUPOS = {
 def get(url: str) -> dict:
     for intento in range(3):
         try:
-            with urllib.request.urlopen(url, timeout=30) as r:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return json.load(r)
         except Exception as e:  # noqa: BLE001
             err = e

@@ -16,6 +16,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Diagnóstico de acceso
+        run: |
+          curl -s -o /dev/null -w "curl por defecto: %{http_code}\n" "https://apis.datos.gob.ar/series/api/search/?q=supermercados&limit=1" || true
+          curl -s -o /dev/null -w "curl con User-Agent: %{http_code}\n" -A "indec-dashboard/1.0 (+https://github.com/lautarorodriguezlopez/indec-dashboard)" "https://apis.datos.gob.ar/series/api/search/?q=supermercados&limit=1" || true
+          curl -s -o /dev/null -w "series directa: %{http_code}\n" -A "indec-dashboard/1.0" "https://apis.datos.gob.ar/series/api/series/?ids=101.1_I2NG_2016_M_22&last=1" || true
       - name: Auditar
         run: |
           python ingesta/auditar_series.py > auditoria.json
