@@ -37,8 +37,8 @@ El proyecto **consume** una API (la del INDEC) y **expone** archivos estáticos.
 | **API6 Acceso irrestricto a flujos sensibles** | No hay flujos sensibles (sin compras, cuentas ni formularios). |
 | **API7 SSRF** | Ver A10. |
 | **API8 Configuración insegura** | Ver A05. |
-| **API9 Inventario** | Los 19 servicios del INDEC están listados en `ingesta/ingestar.py` y las 28 series de datos.gob.ar en `ingesta/series.json` (lista blanca de IDs); todo figura en la sección *Datos* del sitio con su estado. |
-| **API10 Consumo inseguro de APIs** | Lo que devuelven la API del INDEC y la de datos.gob.ar se trata como no confiable: se valida (filas > 0, tipos), se guarda como datos y se escapa al mostrarlo. Si un servicio falla, se conserva la versión anterior. |
+| **API9 Inventario** | Los 19 servicios del INDEC están listados en `ingesta/ingestar.py` las 28 series de datos.gob.ar en `ingesta/series.json` (lista blanca de IDs) y las planillas del INDEC en `ingesta/planillas.py` (lista fija de archivos); todo figura en la sección *Datos* del sitio con su estado. |
+| **API10 Consumo inseguro de APIs** | Lo que devuelven la API del INDEC y la de datos.gob.ar se trata como no confiable: se valida (filas > 0, tipos), se guarda como datos y se escapa al mostrarlo. Si un servicio falla, se conserva la versión anterior. Las planillas Excel solo se bajan de `https://www.indec.gob.ar/ftp/cuadros/economia/`, con tope de 15 MB, verificación de la firma del archivo (xls/xlsx) y descarte de redirecciones fuera del dominio; se leen como datos, sin macros ni fórmulas. |
 
 ## Límites conocidos
 

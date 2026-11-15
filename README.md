@@ -26,7 +26,7 @@ Los datos son del INDEC, que permite copiarlos, reutilizarlos y redistribuirlos 
 ## Cómo funciona
 
 1. **Ingesta** (`.github/workflows/ingesta-semanal.yml`): de lunes a viernes a las 17:13 (hora argentina) baja los 19 servicios con `ingesta/ingestar.py`, en modo incremental (pasada completa el primer lunes de cada mes). Guarda los datos en Parquet en el release `datos`.
-2. **Más indicadores** (`ingesta/series_tiempo.py`): en la misma corrida baja 28 series del INDEC que no están en la API (consumo, construcción, industria, turismo, PIB, Gini, servicios públicos) desde la [API de Series de Tiempo de datos.gob.ar](https://datos.gob.ar/series/api), sin token. La lista está en `ingesta/series.json`, y cada serie se marca como atrasada si su último dato es más viejo de lo esperable.
+2. **Más indicadores** (`ingesta/series_tiempo.py`): en la misma corrida baja 28 series del INDEC que no están en la API (consumo, construcción, industria, turismo, PIB, Gini, servicios públicos) desde la [API de Series de Tiempo de datos.gob.ar](https://datos.gob.ar/series/api), sin token. La lista está en `ingesta/series.json`, y cada serie se marca como atrasada si su último dato es más viejo de lo esperable. Además, `ingesta/planillas.py` lee 15 series que el INDEC solo publica en planillas Excel junto a sus informes: permisos de edificación, ocupación hotelera, confianza empresarial, balanza de pagos y deuda externa.
 3. **Publicación** (`.github/workflows/publicar.yml`): `ingesta/sitio.py` arma los JSON del sitio y lo publica en GitHub Pages.
 4. **Avisos:** si falla un servicio o una serie, o al token le quedan menos de 15 días, la corrida falla y GitHub manda un mail. Las series atrasadas se avisan una vez por semana, los lunes.
 
