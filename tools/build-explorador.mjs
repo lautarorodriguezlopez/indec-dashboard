@@ -1,4 +1,4 @@
-// Construye el explorador: empaqueta site-src/explorador.js con esbuild y
+// Construye el explorador y copia la fuente: empaqueta site-src/explorador.js con esbuild y
 // copia el motor DuckDB-WASM a site/vendor/. Todo se sirve desde el propio
 // sitio (sin CDN), con versiones fijadas en package-lock.json.
 import { build } from "esbuild";
@@ -25,10 +25,16 @@ for (const f of ["duckdb-eh.wasm", "duckdb-browser-eh.worker.js"]) {
   await copyFile(`${DIST}/${f}`, `${OUT}/duckdb/${f}`);
 }
 
+// Fuente Inter (OFL-1.1), servida desde el sitio: sin Google Fonts ni terceros
+await mkdir(`${OUT}/fonts`, { recursive: true });
+const FONT = "node_modules/@fontsource-variable/inter";
+await copyFile(`${FONT}/files/inter-latin-wght-normal.woff2`, `${OUT}/fonts/inter-latin-wght-normal.woff2`);
+await copyFile(`${FONT}/LICENSE`, `${OUT}/fonts/LICENSE-Inter.txt`);
+
 // Registro de lo que se publicó (para auditar qué binarios están en el sitio)
 const hash = async (p) => createHash("sha256").update(await readFile(p)).digest("hex");
 const pkg = JSON.parse(await readFile("node_modules/@duckdb/duckdb-wasm/package.json", "utf8"));
 console.log(`duckdb-wasm ${pkg.version}`);
-for (const p of [`${OUT}/explorador.js`, `${OUT}/duckdb/duckdb-eh.wasm`, `${OUT}/duckdb/duckdb-browser-eh.worker.js`]) {
+for (const p of [`${OUT}/explorador.js`, `${OUT}/duckdb/duckdb-eh.wasm`, `${OUT}/duckdb/duckdb-browser-eh.worker.js`, `${OUT}/fonts/inter-latin-wght-normal.woff2`]) {
   console.log(`sha256 ${await hash(p)}  ${p}`);
 }

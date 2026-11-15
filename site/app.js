@@ -446,7 +446,7 @@
     });
     document.getElementById("tema").addEventListener("click", () => {
       const raiz = document.documentElement;
-      const oscuro = raiz.dataset.theme ? raiz.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      const oscuro = raiz.dataset.theme !== "light"; // oscuro por defecto
       raiz.dataset.theme = oscuro ? "light" : "dark";
       try { localStorage.setItem("tema", raiz.dataset.theme); } catch (e) { /* sin almacenamiento */ }
     });
