@@ -8,7 +8,7 @@ Si encontrás un problema de seguridad, **no abras un issue público**. Usá *Se
 
 ## Arquitectura en una línea
 
-GitHub Actions baja los datos con el token (secreto del repo) → los guarda en Parquet y en una base DuckDB de solo lectura → GitHub Pages sirve un sitio estático. **El navegador nunca ve el token ni habla con la API del INDEC.**
+GitHub Actions baja los datos con el token (secreto del repo) y, sin token, las series de datos.gob.ar → los guarda en Parquet y en una base DuckDB de solo lectura → GitHub Pages sirve un sitio estático. **El navegador nunca ve el token ni habla con la API del INDEC.**
 
 ## Cómo se aplica OWASP Top 10 (2021)
 
@@ -37,8 +37,8 @@ El proyecto **consume** una API (la del INDEC) y **expone** archivos estáticos.
 | **API6 Acceso irrestricto a flujos sensibles** | No hay flujos sensibles (sin compras, cuentas ni formularios). |
 | **API7 SSRF** | Ver A10. |
 | **API8 Configuración insegura** | Ver A05. |
-| **API9 Inventario** | Los 19 servicios consumidos están listados en `ingesta/ingestar.py` y en la sección *Datos* del sitio. |
-| **API10 Consumo inseguro de APIs** | Lo que devuelve la API del INDEC se trata como no confiable: se valida (filas > 0, tipos), se guarda como datos y se escapa al mostrarlo. Si un servicio falla, se conserva la versión anterior. |
+| **API9 Inventario** | Los 19 servicios del INDEC están listados en `ingesta/ingestar.py` y las 28 series de datos.gob.ar en `ingesta/series.json` (lista blanca de IDs); todo figura en la sección *Datos* del sitio con su estado. |
+| **API10 Consumo inseguro de APIs** | Lo que devuelven la API del INDEC y la de datos.gob.ar se trata como no confiable: se valida (filas > 0, tipos), se guarda como datos y se escapa al mostrarlo. Si un servicio falla, se conserva la versión anterior. |
 
 ## Límites conocidos
 
