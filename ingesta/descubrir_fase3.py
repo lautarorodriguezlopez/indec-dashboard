@@ -1,95 +1,47 @@
-"""Exploración de solo lectura para la fase 3 (nuevas fuentes oficiales).
-No escribe datos: imprime qué hay disponible en cada fuente. Se borra al terminar la fase."""
-
+"""Exploración de solo lectura para la fase 3 (segunda pasada). Se borra al cerrar la fase."""
 from __future__ import annotations
+import json, time, urllib.parse, urllib.request
 
-import json
-import ssl
-import urllib.parse
-import urllib.request
+UA = {"User-Agent": "indec-dashboard/1.0 (+https://github.com/lautarorodriguezlopez/indec-dashboard)"}
 
-UA = {"User-Agent": "indec-dashboard/1.0 (+https://github.com/lautarorodriguezlopez/indec-dashboard)",
-      "Accept": "application/json"}
+def get(url, timeout=60):
+    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
+        return json.loads(r.read())
 
+def bloque(n, fn):
+    print(f"\n===== {n} =====", flush=True)
+    t = time.time()
+    try: fn()
+    except Exception as e: print("ERROR:", type(e).__name__, str(e)[:300])
+    print(f"({time.time()-t:.1f}s)")
 
-def get(url: str, raw: bool = False, rango: str | None = None):
-    h = dict(UA)
-    if rango:
-        h["Range"] = rango
-    with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=60) as r:
-        b = r.read()
-        return (b, dict(r.headers)) if raw else json.loads(b)
+def bcra_hist():
+    d = get("https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/5?desde=2018-01-01&hasta=2026-11-15&limit=3000")
+    r = d["results"][0]["detalle"]
+    print("meta:", d.get("metadata"), "filas:", len(r), "primera:", r[-1], "ultima:", r[0])
 
+def series():
+    ids = ["172.3_TL_RECAION_M_0_0_17", "172.3_TL_RECA_IA_M_0_0_24", "452.3_RESULTADO_RIO_0_M_18_54",
+           "151.1_TL_SIN_TAC_2012_M_15", "151.1_AARIADODAD_2012_M_31", "151.1_IPENDIEDAD_2012_M_41",
+           "151.1_AARIADOTAC_2012_M_25", "158.1_REPTE_0_0_5", "57.1_SMVMM_0_M_34", "58.1_MP_0_M_13"]
+    d = get("https://apis.datos.gob.ar/series/api/series/?" + urllib.parse.urlencode(
+        {"ids": ",".join(ids), "limit": 3, "sort": "desc", "format": "json", "metadata": "simple"}))
+    for f in d["meta"][1:]:
+        print(json.dumps({k: f["field"].get(k) for k in ("id", "description", "units", "time_index_start", "time_index_end")}, ensure_ascii=False))
+    for fila in d["data"]: print(fila)
 
-def bloque(nombre, fn):
-    print(f"\n===== {nombre} =====", flush=True)
-    try:
-        fn()
-    except ssl.SSLError as e:
-        print("SSL ERROR:", e)
-    except Exception as e:  # noqa: BLE001
-        print("ERROR:", type(e).__name__, str(e)[:300])
-
-
-def bcra_monetarias():
-    d = get("https://api.bcra.gob.ar/estadisticas/v4.0/monetarias?limit=3000")
-    res = d.get("results", d)
-    print("total:", len(res))
-    for v in res:
-        print(json.dumps({k: v.get(k) for k in ("idVariable", "descripcion", "categoria", "periodicidad", "unidadExpresion",
-                                                 "moneda", "primerFechaInformada", "ultFechaInformada", "ultValorInformado")},
-                         ensure_ascii=False))
-
-
-def bcra_detalle():
-    d = get("https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/1?desde=2026-10-20&hasta=2026-11-14&limit=50")
-    print(json.dumps(d, ensure_ascii=False)[:1500])
-
-
-def bcra_usd():
-    d = get("https://api.bcra.gob.ar/estadisticascambiarias/v1.0/Cotizaciones/USD?fechadesde=2026-11-01&fechahasta=2026-11-14")
-    print(json.dumps(d, ensure_ascii=False)[:1500])
-
-
-def buscar(q):
+def comb(url):
     def f():
-        d = get("https://apis.datos.gob.ar/series/api/search/?" + urllib.parse.urlencode({"q": q, "limit": 12}))
-        for it in d.get("data", []):
-            fl, ds = it.get("field", {}), it.get("dataset", {})
-            print(json.dumps({"id": fl.get("id"), "titulo": fl.get("title"), "desc": (fl.get("description") or "")[:120],
-                              "frec": fl.get("frequency"), "unidad": fl.get("units"), "desde": fl.get("time_index_start"),
-                              "hasta": fl.get("time_index_end"), "dataset": ds.get("title"),
-                              "org": (ds.get("publisher") or {}).get("name")}, ensure_ascii=False))
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=240) as r:
+            print("status", r.status, "len", r.headers.get("Content-Length"), "type", r.headers.get("Content-Type"))
+            b = r.read(4000)
+            print(b.decode("utf-8", "replace"))
     return f
 
-
-def combustibles():
-    d = get("https://datos.gob.ar/api/3/action/package_search?" + urllib.parse.urlencode({"q": "precios surtidor", "rows": 6}))
-    for p in d["result"]["results"]:
-        print("PAQUETE:", p["name"], "|", p["title"])
-        for r in p.get("resources", []):
-            print("   ", json.dumps({k: r.get(k) for k in ("name", "format", "url", "size", "last_modified")}, ensure_ascii=False))
-
-
-def combustibles_head():
-    d = get("https://datos.gob.ar/api/3/action/package_search?" + urllib.parse.urlencode({"q": "precios surtidor", "rows": 6}))
-    for p in d["result"]["results"]:
-        for r in p.get("resources", []):
-            if (r.get("format") or "").lower() == "csv":
-                try:
-                    b, h = get(r["url"], raw=True, rango="bytes=0-3000")
-                    print("URL:", r["url"], "| content-length:", h.get("Content-Length"), "| content-range:", h.get("Content-Range"))
-                    print(b.decode("utf-8", "replace")[:1500])
-                except Exception as e:  # noqa: BLE001
-                    print("URL:", r["url"], "ERROR", e)
-
-
-bloque("BCRA monetarias v4 (lista)", bcra_monetarias)
-bloque("BCRA monetarias v4 (detalle id 1)", bcra_detalle)
-bloque("BCRA cambiarias USD", bcra_usd)
-for q in ("recaudacion tributaria", "resultado primario", "resultado financiero sector publico", "empleo registrado",
-          "trabajadores registrados SIPA", "RIPTE", "salario minimo vital y movil", "deuda publica bruta",
-          "gasto publico", "jubilacion minima", "tipo de cambio", "reservas internacionales", "tasa badlar"):
-    bloque(f"datos.gob.ar: {q}", buscar(q))
-bloque("Combustibles: paquetes CKAN", combustibles)
-bloque("Combustibles: cabecera de los CSV", combustibles_head)
+bloque("BCRA historia id 5", bcra_hist)
+bloque("Series nuevas datos.gob.ar", series)
+base = "datos.energia.gob.ar/dataset/1c181390-5045-475e-94dc-410429be4b17/resource/80ac25de-a44a-4445-9215-090cf55cfda5/download/precios-en-surtidor-resolucin-3142016.csv"
+bloque("Combustibles https", comb("https://" + base))
+bloque("Combustibles http", comb("http://" + base))
+bloque("Georef provincias", lambda: print(json.dumps(get("https://apis.datos.gob.ar/georef/api/provincias?campos=id,nombre&max=30"), ensure_ascii=False)[:2500]))
