@@ -73,6 +73,10 @@ jobs:
         if: always()
         run: python ingesta/series_tiempo.py
 
+      - name: Leer planillas del INDEC (hoteles, permisos, confianza, balanza de pagos, deuda)
+        if: always()
+        run: python ingesta/planillas.py
+
       - name: Guardar los datos en el release "datos"
         if: always() && hashFiles('data/parquet/estado.json') != ''
         run: |
