@@ -1,32 +1,29 @@
-"""Busca las planillas (xls/xlsx) que publica el INDEC en sus páginas de temas.
-Solo lectura; usado para planificar la fase 2."""
-import json, re, sys, time, urllib.request
-from html import unescape
-
+"""Sondea URLs candidatas de planillas del INDEC y muestra cómo arma los links una página de tema."""
+import json, re, sys, urllib.request
 H = {"User-Agent": "indec-dashboard/1.0 (+https://github.com/lautarorodriguezlopez/indec-dashboard)"}
-BASE = "https://www.indec.gob.ar"
-def get(url):
+B = "https://www.indec.gob.ar/ftp/cuadros/economia/"
+cands = ["serie_etn_sam.xlsx","serie_etn_industria.xlsx","serie_etn_industria_manufacturera.xlsx","serie_etn_im.xlsx",
+ "serie_supermercados.xlsx","serie_mayoristas.xlsx","serie_centros_compras.xlsx","serie_shoppings.xlsx",
+ "cin_II_2026.xls","cin_I_2026.xls","cin_II_2026.xlsx","sh_bal_pag_anual.xls","sh_deuda_externa.xls",
+ "sh_isac.xls","sh_isac_permisos.xls","serie_permisos_edificacion.xlsx","sh_permisos_edificacion.xls","isac_cuadros.xls","sh_isac_anexo.xls",
+ "eoh_serie.xls","serie_eoh.xlsx","eoh_pernoctes_serie.xlsx","eoh_anexo_cuadros_2025.xlsx","eoh_cuadros_2025.xls"]
+out = {"sondeo": {}, "links": {}}
+def get(u, n=None):
+    req = urllib.request.Request(u, headers=H)
+    with urllib.request.urlopen(req, timeout=40) as r:
+        return r.status, r.headers.get("Content-Type"), (r.read(n) if n else r.read())
+for c in cands:
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers=H), timeout=30) as r:
-            return r.read().decode("utf-8", "replace")
+        s, ct, b = get(B + c, 8); out["sondeo"][c] = [s, ct, b[:8].hex()]
     except Exception as e:
-        print(f"ERR {url} {e}", file=sys.stderr); return ""
-
-paginas = [f"{BASE}/indec/web/Nivel3-Tema-3-{i}" for i in range(1, 46)]
-vistas, links = set(), {}
-cola = list(paginas)
-while cola and len(vistas) < 160:
-    u = cola.pop(0)
-    if u in vistas: continue
-    vistas.add(u)
-    html = get(u); time.sleep(0.6)
-    titulo = re.search(r"<title>(.*?)</title>", html, re.S)
-    for m in re.finditer(r'href="([^"]+?\.(?:xls|xlsx))"', html, re.I):
-        href = m.group(1)
-        href = href if href.startswith("http") else BASE + "/" + href.lstrip("/")
-        ctx = re.sub(r"<[^>]+>", " ", html[max(0, m.start()-300):m.end()+200])
-        links.setdefault(href, {"pagina": u, "contexto": " ".join(unescape(ctx).split())[-220:]})
-    if "Nivel3" in u:
-        for m in re.finditer(r'href="(/indec/web/Nivel4-Tema-3-[0-9-]+)"', html):
-            cola.append(BASE + m.group(1))
-print(json.dumps({"paginas": len(vistas), "planillas": links}, ensure_ascii=False))
+        out["sondeo"][c] = str(e)[:80]
+for p in ["https://www.indec.gob.ar/Nivel4/Tema/3/13/56", "https://www.indec.gob.ar/Nivel4/Tema/3/42/131",
+          "https://www.indec.gob.ar/Nivel4/Tema/3/35/45", "https://www.indec.gob.ar/Nivel4/Tema/3/3/42",
+          "https://www.indec.gob.ar/Nivel4/Tema/3/1/34", "https://www.indec.gob.ar/Nivel4/Tema/3/6/46"]:
+    try:
+        _, _, b = get(p); h = b.decode("utf-8", "replace")
+        out["links"][p] = sorted(set(re.findall(r'''["'(]([^"'()\s]*?\.xlsx?)["')]''', h, re.I)))[:80] + \
+            [m for m in re.findall(r'''(?:src|href)=["']([^"']+\.js[^"']*)''', h)][:5]
+    except Exception as e:
+        out["links"][p] = str(e)[:80]
+print(json.dumps(out, ensure_ascii=False))
