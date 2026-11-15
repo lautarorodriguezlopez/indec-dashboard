@@ -61,6 +61,8 @@ def main() -> int:
 
     for s in catalogo:
         reg = {k: s[k] for k in ("clave", "id", "grupo", "nombre", "unidad", "frecuencia")}
+        if s.get("fuente"):
+            reg["fuente"] = s["fuente"]
         try:
             filas = bajar(s["id"])
             df = pd.DataFrame(filas, columns=["fecha", "valor"])
@@ -74,10 +76,10 @@ def main() -> int:
             for k in ("clave", "id", "grupo", "nombre", "unidad", "frecuencia"):
                 df[k] = s[k]
             partes.append(df)
-            ultimo = max(df["fecha"])
+            ultimo = min(max(df["fecha"]), HOY)  # el SMVM publica montos ya fijados para meses futuros
             dias = (HOY - ultimo).days
             reg.update(ultimo=ultimo.isoformat(), filas=int(len(df)), dias=dias,
-                       atrasada=dias > MAX_DIAS.get(s["frecuencia"], 135))
+                       atrasada=dias > s.get("max_dias", MAX_DIAS.get(s["frecuencia"], 135)))
         else:
             reg.update(ultimo=None, filas=0, dias=None, atrasada=True)
         estado.append(reg)

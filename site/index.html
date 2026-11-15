@@ -28,6 +28,7 @@
       <button role="tab" aria-selected="false" data-tab="precios">Precios</button>
       <button role="tab" aria-selected="false" data-tab="bolsillo">Bolsillo</button>
       <button role="tab" aria-selected="false" data-tab="actividad">Actividad</button>
+      <button role="tab" aria-selected="false" data-tab="dinero">Dólar y tasas</button>
       <button role="tab" aria-selected="false" data-tab="mas">Más indicadores</button>
       <button role="tab" aria-selected="false" data-tab="explorador">Explorador</button>
       <button role="tab" aria-selected="false" data-tab="catalogo">Datos</button>
@@ -81,6 +82,31 @@
         </div>
       </section>
 
+      <section id="dinero" class="panel" role="tabpanel" hidden>
+        <div class="filtros">
+          <div class="rango" data-rango-grupo="dinero" role="group" aria-label="Período"></div>
+        </div>
+        <div id="kpi-dinero" class="kpis"></div>
+        <h2 class="sec">Dólar y reservas</h2>
+        <div class="cards">
+          <figure class="card ancha" id="c-dolar"></figure>
+          <figure class="card ancha" id="c-reservas"></figure>
+        </div>
+        <h2 class="sec">Tasas de interés</h2>
+        <div class="cards">
+          <figure class="card ancha" id="c-tasas"></figure>
+          <figure class="card" id="c-expectativas"></figure>
+          <figure class="card" id="c-m2"></figure>
+        </div>
+        <h2 class="sec">Crédito y depósitos</h2>
+        <div class="cards">
+          <figure class="card ancha" id="c-credito"></figure>
+        </div>
+        <h2 class="sec">Índices de actualización</h2>
+        <div class="cards"><figure class="card ancha" id="c-indices"></figure></div>
+        <p class="nota" id="dinero-nota"></p>
+      </section>
+
       <section id="mas" class="panel" role="tabpanel" hidden>
         <div class="filtros">
           <div class="rango" data-rango-grupo="mas" role="group" aria-label="Período"></div>
@@ -91,6 +117,18 @@
           <figure class="card ancha" id="c-consumo"></figure>
           <figure class="card" id="c-pagos"></figure>
           <figure class="card" id="c-online"></figure>
+        </div>
+        <h2 class="sec">Empleo registrado</h2>
+        <div class="cards">
+          <figure class="card" id="c-sipa"></figure>
+          <figure class="card" id="c-sipa-comp"></figure>
+        </div>
+        <h2 class="sec">Ingresos en términos reales</h2>
+        <div class="cards"><figure class="card ancha" id="c-ingresos"></figure></div>
+        <h2 class="sec">Cuentas públicas</h2>
+        <div class="cards">
+          <figure class="card" id="c-primario"></figure>
+          <figure class="card" id="c-recaudacion"></figure>
         </div>
         <h2 class="sec">Construcción</h2>
         <div class="cards">
@@ -148,15 +186,20 @@
         <h2>Los 19 servicios del Catálogo API-INDEC</h2>
         <p class="lead" id="cat-lead"></p>
         <div class="tabla-wrap"><table id="tabla-catalogo" class="tabla"></table></div>
-        <h2 class="sec">Más indicadores del INDEC (vía datos.gob.ar y planillas del INDEC)</h2>
+        <h2 class="sec">Más indicadores (vía datos.gob.ar y planillas del INDEC)</h2>
         <p class="lead" id="cat-extra-lead"></p>
         <div class="tabla-wrap"><table id="tabla-extra" class="tabla"></table></div>
+        <h2 class="sec">BCRA (API de Estadísticas Monetarias)</h2>
+        <p class="lead" id="cat-bcra-lead"></p>
+        <div class="tabla-wrap"><table id="tabla-bcra" class="tabla"></table></div>
         <p class="nota">Los archivos están en formato Parquet: se abren con Python (pandas), R, DuckDB o Power BI.</p>
       </section>
     </main>
 
     <footer>
-      Fuente: <a href="https://api.indec.gob.ar/" rel="noopener">INDEC, Catálogo API-INDEC</a> (en beta).
+      Fuentes: <a href="https://api.indec.gob.ar/" rel="noopener">INDEC, Catálogo API-INDEC</a> (en beta),
+      <a href="https://datos.gob.ar/" rel="noopener">datos.gob.ar</a> y
+      <a href="https://www.bcra.gob.ar/en/central-bank-api-catalog/" rel="noopener">API del BCRA</a>.
       Sitio no oficial, sin relación con el INDEC. Código en
       <a href="https://github.com/lautarorodriguezlopez/indec-dashboard" rel="noopener">GitHub</a>.
     </footer>
