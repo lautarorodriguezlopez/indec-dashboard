@@ -1,0 +1,21 @@
+{
+  "_nota": "Variables de la API de Estadísticas Monetarias v4 del BCRA (pública, sin token). Validadas el 15/11/2026. Para agregar o corregir una variable, editar este archivo.",
+  "variables": [
+    {"clave": "reservas", "id": 1, "grupo": "Dólar y reservas", "nombre": "Reservas internacionales", "unidad": "Millones de USD", "frecuencia": "D"},
+    {"clave": "tc_mayorista", "id": 5, "grupo": "Dólar y reservas", "nombre": "Dólar mayorista (Com. A 3500)", "unidad": "Pesos por USD", "frecuencia": "D"},
+    {"clave": "tc_minorista", "id": 4, "grupo": "Dólar y reservas", "nombre": "Dólar minorista (promedio vendedor)", "unidad": "Pesos por USD", "frecuencia": "D"},
+    {"clave": "banda_piso", "id": 1187, "grupo": "Dólar y reservas", "nombre": "Banda cambiaria: límite inferior", "unidad": "Pesos por USD", "frecuencia": "D"},
+    {"clave": "banda_techo", "id": 1188, "grupo": "Dólar y reservas", "nombre": "Banda cambiaria: límite superior", "unidad": "Pesos por USD", "frecuencia": "D"},
+    {"clave": "badlar", "id": 7, "grupo": "Tasas", "nombre": "BADLAR bancos privados", "unidad": "% nominal anual", "frecuencia": "D"},
+    {"clave": "tamar", "id": 44, "grupo": "Tasas", "nombre": "TAMAR bancos privados", "unidad": "% nominal anual", "frecuencia": "D"},
+    {"clave": "tasa_plazo_fijo", "id": 12, "grupo": "Tasas", "nombre": "Plazo fijo a 30 días", "unidad": "% nominal anual", "frecuencia": "D"},
+    {"clave": "tasa_personales", "id": 14, "grupo": "Tasas", "nombre": "Préstamos personales", "unidad": "% nominal anual", "frecuencia": "D"},
+    {"clave": "base_monetaria", "id": 15, "grupo": "Dinero y crédito", "nombre": "Base monetaria", "unidad": "Millones de pesos", "frecuencia": "D"},
+    {"clave": "depositos", "id": 21, "grupo": "Dinero y crédito", "nombre": "Depósitos en entidades financieras", "unidad": "Millones de pesos", "frecuencia": "D"},
+    {"clave": "prestamos_privados", "id": 26, "grupo": "Dinero y crédito", "nombre": "Préstamos al sector privado", "unidad": "Millones de pesos", "frecuencia": "D"},
+    {"clave": "m2_privado_ia", "id": 25, "grupo": "Dinero y crédito", "nombre": "M2 privado (variación interanual, promedio 30 días)", "unidad": "Porcentaje", "frecuencia": "D"},
+    {"clave": "inflacion_esperada", "id": 29, "grupo": "Expectativas", "nombre": "Inflación esperada a 12 meses (mediana REM)", "unidad": "Porcentaje", "frecuencia": "M"},
+    {"clave": "uva", "id": 31, "grupo": "Índices", "nombre": "UVA (unidad de valor adquisitivo)", "unidad": "Pesos", "frecuencia": "D"},
+    {"clave": "icl", "id": 40, "grupo": "Índices", "nombre": "ICL (índice para contratos de locación)", "unidad": "Índice 30/6/2020 = 1", "frecuencia": "D"}
+  ]
+}

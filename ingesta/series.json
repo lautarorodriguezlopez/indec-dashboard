@@ -1,5 +1,5 @@
 {
-  "_nota": "Series del INDEC tomadas de la API de Series de Tiempo de datos.gob.ar (sin token). Validadas el 14/11/2026. Para agregar o corregir una serie, editar este archivo.",
+  "_nota": "Series de la API de Series de Tiempo de datos.gob.ar (sin token): INDEC y otros organismos nacionales (campo fuente). Validadas el 15/11/2026. Para agregar o corregir una serie, editar este archivo.",
   "series": [
     {"clave": "super_desest", "id": "455.1_VENTAS_PREADA_0_M_44_44", "grupo": "Consumo", "nombre": "Supermercados (desestacionalizada)", "unidad": "Índice 2017=100", "frecuencia": "M"},
     {"clave": "super", "id": "455.1_VENTAS_PRENAL_0_M_34_10", "grupo": "Consumo", "nombre": "Supermercados (serie original)", "unidad": "Índice 2017=100", "frecuencia": "M"},
@@ -11,7 +11,6 @@
     {"clave": "pago_otros", "id": "455.1_OTROS_MEDIIOS_0_M_12_32", "grupo": "Consumo", "nombre": "Supermercados: otros medios de pago", "unidad": "Miles de pesos", "frecuencia": "M"},
     {"clave": "canal_online", "id": "455.1_CANALES_ONINE_0_M_15_84", "grupo": "Consumo", "nombre": "Supermercados: ventas online", "unidad": "Miles de pesos", "frecuencia": "M"},
     {"clave": "canal_salon", "id": "455.1_SALON_VENTTAS_0_M_12_82", "grupo": "Consumo", "nombre": "Supermercados: ventas en salón", "unidad": "Miles de pesos", "frecuencia": "M"},
-
     {"clave": "isac_desest", "id": "33.2_ISAC_SIN_EDAD_0_M_23_56", "grupo": "Construcción", "nombre": "ISAC (desestacionalizado)", "unidad": "Índice 2004=100", "frecuencia": "M"},
     {"clave": "isac", "id": "33.2_ISAC_NIVELRAL_0_M_18_63", "grupo": "Construcción", "nombre": "ISAC (serie original)", "unidad": "Índice 2004=100", "frecuencia": "M"},
     {"clave": "ins_cemento", "id": "33.3_ISAC_CEMENAND_0_0_21_29", "grupo": "Construcción", "nombre": "Insumo: cemento", "unidad": "Índice 2004=100", "frecuencia": "M"},
@@ -20,19 +19,25 @@
     {"clave": "ins_pinturas", "id": "33.3_ISAC_PINTUION_0_0_31_13", "grupo": "Construcción", "nombre": "Insumo: pinturas", "unidad": "Índice 2004=100", "frecuencia": "M"},
     {"clave": "ins_asfalto", "id": "33.3_ISAC_ASFALLTO_0_0_12_97", "grupo": "Construcción", "nombre": "Insumo: asfalto", "unidad": "Índice 2004=100", "frecuencia": "M"},
     {"clave": "ins_hormigon", "id": "33.3_ISAC_HORMIADO_0_0_23_36", "grupo": "Construcción", "nombre": "Insumo: hormigón elaborado", "unidad": "Índice 2004=100", "frecuencia": "M"},
-
     {"clave": "ucii", "id": "31.3_UNG_2004_M_18", "grupo": "Industria", "nombre": "Capacidad instalada: nivel general", "unidad": "Porcentaje", "frecuencia": "M"},
     {"clave": "ucii_autos", "id": "31.3_UV_2004_M_25", "grupo": "Industria", "nombre": "Capacidad instalada: vehículos automotores", "unidad": "Porcentaje", "frecuencia": "M"},
     {"clave": "ucii_metales", "id": "31.3_UIMB_2004_M_33", "grupo": "Industria", "nombre": "Capacidad instalada: metales básicos", "unidad": "Porcentaje", "frecuencia": "M"},
     {"clave": "ucii_textil", "id": "31.3_UPT_2004_M_23", "grupo": "Industria", "nombre": "Capacidad instalada: productos textiles", "unidad": "Porcentaje", "frecuencia": "M"},
     {"clave": "ucii_quimicos", "id": "31.3_USPQ_2004_M_34", "grupo": "Industria", "nombre": "Capacidad instalada: sustancias y productos químicos", "unidad": "Porcentaje", "frecuencia": "M"},
-
     {"clave": "tur_receptivo", "id": "322.3_TURISMO_REIVO__17", "grupo": "Turismo", "nombre": "Turistas que llegan (Ezeiza y Aeroparque)", "unidad": "Miles de pasajeros", "frecuencia": "M"},
     {"clave": "tur_emisivo", "id": "322.3_TURISMO_EMIVO__15", "grupo": "Turismo", "nombre": "Turistas que viajan al exterior (Ezeiza y Aeroparque)", "unidad": "Miles de pasajeros", "frecuencia": "M"},
-
     {"clave": "pib", "id": "4.2_OGP_2004_T_17", "grupo": "Macro", "nombre": "PIB a precios constantes", "unidad": "Millones de pesos de 2004", "frecuencia": "T"},
     {"clave": "gini", "id": "65.1_CGI_0_0_21", "grupo": "Macro", "nombre": "Coeficiente de Gini (ingreso per cápita familiar)", "unidad": "Coeficiente (0 a 1)", "frecuencia": "T"},
-
-    {"clave": "issp", "id": "302.3_S_TENDENCIRAL_0_S_28", "grupo": "Servicios públicos", "nombre": "Servicios públicos: nivel general (tendencia-ciclo)", "unidad": "Índice 2004=100", "frecuencia": "M"}
+    {"clave": "issp", "id": "302.3_S_TENDENCIRAL_0_S_28", "grupo": "Servicios públicos", "nombre": "Servicios públicos: nivel general (tendencia-ciclo)", "unidad": "Índice 2004=100", "frecuencia": "M"},
+    {"clave": "recaudacion", "id": "172.3_TL_RECAION_M_0_0_17", "grupo": "Fiscal", "nombre": "Recaudación tributaria total", "unidad": "Millones de pesos", "frecuencia": "M", "fuente": "Ministerio de Economía (con datos de ARCA)"},
+    {"clave": "recaudacion_ia", "id": "172.3_TL_RECA_IA_M_0_0_24", "grupo": "Fiscal", "nombre": "Recaudación tributaria total, variación interanual", "unidad": "Porcentaje", "frecuencia": "M", "fuente": "Ministerio de Economía (con datos de ARCA)"},
+    {"clave": "resultado_primario", "id": "452.3_RESULTADO_RIO_0_M_18_54", "grupo": "Fiscal", "nombre": "Resultado primario del Sector Público Nacional (IMIG)", "unidad": "Millones de pesos", "frecuencia": "M", "fuente": "Ministerio de Economía"},
+    {"clave": "sipa_total_desest", "id": "151.1_TL_SIN_TAC_2012_M_15", "grupo": "Empleo", "nombre": "Trabajadores registrados, total (desestacionalizado)", "unidad": "Miles de personas", "frecuencia": "M", "fuente": "Secretaría de Trabajo (SIPA)", "max_dias": 200},
+    {"clave": "sipa_privados", "id": "151.1_AARIADODAD_2012_M_31", "grupo": "Empleo", "nombre": "Asalariados registrados del sector privado", "unidad": "Miles de personas", "frecuencia": "M", "fuente": "Secretaría de Trabajo (SIPA)", "max_dias": 200},
+    {"clave": "sipa_publicos_desest", "id": "151.1_AARIADOTAC_2012_M_25", "grupo": "Empleo", "nombre": "Asalariados registrados del sector público (desestacionalizado)", "unidad": "Miles de personas", "frecuencia": "M", "fuente": "Secretaría de Trabajo (SIPA)", "max_dias": 200},
+    {"clave": "sipa_monotributo", "id": "151.1_IPENDIEDAD_2012_M_41", "grupo": "Empleo", "nombre": "Monotributistas", "unidad": "Miles de personas", "frecuencia": "M", "fuente": "Secretaría de Trabajo (SIPA)", "max_dias": 200},
+    {"clave": "ripte", "id": "158.1_REPTE_0_0_5", "grupo": "Ingresos", "nombre": "RIPTE: remuneración promedio de los trabajadores estables", "unidad": "Pesos corrientes", "frecuencia": "M", "fuente": "Secretaría de Seguridad Social"},
+    {"clave": "smvm", "id": "57.1_SMVMM_0_M_34", "grupo": "Ingresos", "nombre": "Salario mínimo, vital y móvil (mensual)", "unidad": "Pesos corrientes", "frecuencia": "M", "fuente": "Consejo del Salario / Secretaría de Trabajo"},
+    {"clave": "haber_minimo", "id": "58.1_MP_0_M_13", "grupo": "Ingresos", "nombre": "Haber mínimo jubilatorio", "unidad": "Pesos corrientes", "frecuencia": "M", "fuente": "ANSES / Secretaría de Seguridad Social"}
   ]
 }
