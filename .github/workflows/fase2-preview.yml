@@ -8,17 +8,14 @@ permissions:
   contents: read
 
 jobs:
-  bajar:
+  probar:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Bajar planillas del INDEC
-        run: |
-          mkdir p && cd p
-          for f in serie_eoh_pernoctaciones.xlsx cin_II_2026.xls permisos_edificacion_246_municipios.xlsx \
-                   serie_etn_sam.xlsx serie_etn_im.xlsx serie_supermercados.xlsx sh_super_mayoristas.xls; do
-            curl -sSf -A "indec-dashboard/1.0" -o "$f" "https://www.indec.gob.ar/ftp/cuadros/economia/$f" && ls -l "$f"
-          done
-          tar czf ../p.tgz .
-          cd .. && sha256sum p.tgz
-          echo "<<<RAST"; base64 -w 20000 p.tgz; echo "RAST>>>"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Leer planillas del INDEC (prueba real)
+        run: python ingesta/planillas.py && python -c "import json;d=json.load(open('data/parquet/estado_planillas.json'));print(d['series_ok'],'/',d['series_total'])"

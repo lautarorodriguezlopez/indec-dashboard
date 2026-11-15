@@ -25,6 +25,7 @@
     const m = /^(\d{4})-(\d{2})$/.exec(p);
     if (m) return corto ? `${MESES[+m[2] - 1]}-${m[1].slice(2)}` : `${MESES[+m[2] - 1]} ${m[1]}`;
     const q = /^(\d{4})-([TS])(\d)$/.exec(p);
+    if (q && corto) return `${q[2]}${q[3]}-${q[1].slice(2)}`;
     if (q) return q[2] === "T" ? `${q[3]}.º trim. ${q[1]}` : `${q[3]}.º sem. ${q[1]}`;
     return p;
   }
@@ -410,8 +411,10 @@
         <td class="wrap"><b>${esc(x.nombre)}</b><br><span class="nota">${esc(x.unidad)}</span></td>
         <td>${esc(x.grupo)}</td>
         <td>${esc(x.ultimo ? fmtP(String(x.ultimo).slice(0, 7)) : "—")}</td>
-        <td>${!x.ok ? '<span class="falla">✕ Falló</span>' : x.atrasada ? '<span class="atraso">● Atrasada</span>' : '<span class="ok">✓ Al día</span>'}</td>
-        <td><a href="https://apis.datos.gob.ar/series/api/series/?ids=${encodeURIComponent(x.id)}&amp;format=csv" rel="noopener noreferrer">CSV</a></td></tr>`).join("") + "</tbody>";
+        <td>${!x.ok ? '<span class="falla">✕ Falló</span>' : x.discontinuada ? '<span class="nota">Discontinuada</span>' : x.atrasada ? '<span class="atraso">● Atrasada</span>' : '<span class="ok">✓ Al día</span>'}</td>
+        <td>${x.fuente === "planilla INDEC"
+          ? `<a href="https://www.indec.gob.ar/ftp/cuadros/economia/${encodeURIComponent(x.id)}" rel="noopener noreferrer">Planilla</a>`
+          : `<a href="https://apis.datos.gob.ar/series/api/series/?ids=${encodeURIComponent(x.id)}&amp;format=csv" rel="noopener noreferrer">CSV</a>`}</td></tr>`).join("") + "</tbody>";
   }
 
   // ---------------------------------------------------------------- más indicadores
@@ -426,12 +429,15 @@
     }
     const rango = estado.rango.mas;
     const co = M.consumo, cn = M.construccion, ind = M.industria, tu = M.turismo, ma = M.macro, sv = M.servicios;
+    const ex = M.externo, xp = M.expectativas;
     const pibU = ultimo(ma.pib_ia.p, ma.pib_ia.v);
     kpis(document.getElementById("kpi-mas"), [
       { t: "Ventas en supermercados", v: signo(co.kpi_super_v_ia.v) + " %", d: `interanual, a precios constantes · ${fmtP(co.kpi_super_v_ia.p)}` },
       { t: "Construcción (ISAC)", v: signo(cn.kpi_isac_v_ia.v) + " %", d: `interanual · ${fmtP(cn.kpi_isac_v_ia.p)}` },
       { t: "Capacidad instalada industrial", v: pct(ind.kpi.v), d: `${signo(ind.kpi.pp_ia)} pp en 12 meses · ${fmtP(ind.kpi.p)}` },
       { t: "PIB", v: signo(pibU.v) + " %", d: `interanual · ${fmtP(pibU.p)}` },
+      ...(cn.kpi_permisos_v_ia ? [{ t: "Permisos de edificación", v: signo(cn.kpi_permisos_v_ia.v) + " %", d: `superficie autorizada, interanual · ${fmtP(cn.kpi_permisos_v_ia.p)}` }] : []),
+      ...(ex ? [{ t: "Deuda externa bruta", v: "USD " + num(ex.kpi_deuda.v, 1) + " mil M", d: `${signo(ex.kpi_deuda.v_ia)} mil M en 12 meses · ${fmtP(ex.kpi_deuda.p)}` }] : []),
     ]);
     const ser = (bloque) => Object.keys(bloque.series).map((n) => ({ nombre: n, valores: bloque.series[n] }));
     lineas(document.getElementById("c-consumo"), {
@@ -454,6 +460,10 @@
       titulo: `Insumos de la construcción · ${fmtP(cn.insumos_periodo)}`, desc: "Variación % interanual de la demanda de cada insumo.",
       serie: "Interanual", items: cn.insumos.map((x) => ({ etiqueta: x.insumo, valor: x.v_ia })), fmt: (v) => signo(v) + " %",
     });
+    if (cn.permisos) lineas(document.getElementById("c-permisos"), {
+      titulo: "Permisos de edificación", desc: "Miles de m² autorizados por mes para obras privadas en 246 municipios. Anticipa la construcción de los próximos meses.",
+      p: cn.permisos.p, series: [{ nombre: "Superficie autorizada", valores: cn.permisos.v }], rango, cero: true, fmt: (v) => num(v, 0) + " mil m²",
+    });
     lineas(document.getElementById("c-ucii"), {
       titulo: "Uso de la capacidad instalada", desc: "% de la capacidad de las fábricas que se está usando, por sector.",
       p: ind.ucii.p, series: ser(ind.ucii), rango, fmt: pct,
@@ -463,6 +473,27 @@
       titulo: "Turismo internacional", desc: "Miles de pasajeros por mes en Ezeiza y Aeroparque: los que llegan al país y los residentes que viajan al exterior.",
       p: tu.flujos.p, series: ser(tu.flujos), rango, cero: true, fmt: (v) => num(v, 0) + " mil",
     });
+    if (tu.hoteles) lineas(document.getElementById("c-hoteles"), {
+      titulo: "Ocupación hotelera", desc: "Noches en hoteles y alojamientos de todo el país, por condición de residencia del viajero (serie desestacionalizada).",
+      p: tu.hoteles.p, series: ser(tu.hoteles), rango, cero: true, fmt: (v) => (v >= 1e6 ? num(v / 1e6, 2) + " M" : num(v / 1e3, 0) + " mil"),
+      fmtEje: (v) => (v === 0 ? "0" : v >= 1e6 ? num(v / 1e6, 1) + " M" : num(v / 1e3, 0) + " mil"),
+      nota: "El INDEC dejó de publicar la Encuesta de Ocupación Hotelera después de noviembre de 2025: la serie termina ahí.",
+    });
+    if (xp) lineas(document.getElementById("c-ice"), {
+      titulo: "Confianza empresarial", desc: "Saldo entre empresarios optimistas y pesimistas sobre los próximos 3 meses. Por debajo de 0 predominan los pesimistas.",
+      p: xp.ice.p, series: ser(xp.ice), rango, cero: true, fmt: (v) => signo(v) + " %",
+      nota: "La encuesta a la industria manufacturera empezó en enero de 2025.",
+    });
+    if (ex) {
+      lineas(document.getElementById("c-cuenta"), {
+        titulo: "Balanza de pagos: cuenta corriente", desc: "Millones de USD por trimestre. Positivo: entran más dólares por comercio, turismo, intereses y utilidades de los que salen.",
+        p: ex.cuenta.p, series: ser(ex.cuenta), rango, cero: true, fmt: (v) => "USD " + num(v, 0) + " M",
+      });
+      lineas(document.getElementById("c-deuda"), {
+        titulo: "Deuda externa bruta, por deudor", desc: "Miles de millones de USD al cierre de cada trimestre, a valor nominal.",
+        p: ex.deuda.p, series: ser(ex.deuda), rango, cero: true, fmt: (v) => "USD " + num(v, 1) + " mil M", fmtEje: (v) => num(v, 0),
+      });
+    }
     lineas(document.getElementById("c-pib"), {
       titulo: "PIB", desc: "Variación % interanual del PIB a precios constantes, por trimestre.",
       p: ma.pib_ia.p, series: [{ nombre: "PIB interanual", valores: ma.pib_ia.v }], rango: "todo", fmt: (v) => signo(v) + " %",
@@ -475,9 +506,9 @@
       titulo: "Servicios públicos", desc: "Índice de servicios públicos (transporte, peajes, telefonía, residuos y otros), tendencia-ciclo, 2004 = 100.",
       p: sv.issp.p, series: ser(sv.issp), rango, fmt: (v) => num(v),
     });
-    const atrasadas = [co, cn, ind, tu, ma, sv].flatMap((b) => b.fuentes).filter((f) => f.atrasada);
+    const atrasadas = [co, cn, ind, tu, ma, sv, ex, xp].filter(Boolean).flatMap((b) => b.fuentes).filter((f) => f.atrasada);
     document.getElementById("mas-nota").textContent =
-      "Fuente: INDEC, vía la API de Series de Tiempo de datos.gob.ar. Algunas series llegan a datos.gob.ar con unas semanas de atraso respecto del informe del INDEC." +
+      "Fuente: INDEC, vía la API de Series de Tiempo de datos.gob.ar y las planillas que el INDEC publica junto a cada informe (permisos de edificación, hoteles, confianza empresarial, balanza de pagos y deuda externa)." +
       (atrasadas.length ? ` Atención: ${atrasadas.length} serie(s) están atrasadas (${atrasadas.map((f) => f.nombre).join(", ")}).` : "");
   }
 

@@ -463,10 +463,11 @@ def explorador(estado: dict) -> None:
 # Series de datos.gob.ar (ingesta/series_tiempo.py). Si no están, la sección no se arma.
 
 def _extra() -> pd.DataFrame | None:
-    archivo = DIR / "series_extra.parquet"
-    if not archivo.exists():
+    """series_extra (datos.gob.ar) + planillas del INDEC, en un solo DataFrame."""
+    partes = [pd.read_parquet(DIR / f) for f in ("series_extra.parquet", "planillas.parquet") if (DIR / f).exists()]
+    if not partes:
         return None
-    df = pd.read_parquet(archivo)
+    df = pd.concat(partes, ignore_index=True)
     df["fecha"] = pd.to_datetime(df["fecha"])
     trimestral = df["frecuencia"] == "T"
     df["p"] = df["fecha"].dt.strftime("%Y-%m")
@@ -576,8 +577,37 @@ def mas(estado_series: dict | None) -> dict | None:
         "kpi_v_ia": {"p": p_issp, "v": v_issp},
         "fuentes": info("issp"),
     }
+    # Fase 2: planillas del INDEC
+    pm2 = _serie(df, "permisos_m2").dropna() / 1000
+    p_pm, v_pm = _var(pm2, 12)
+    construccion["permisos"] = {"p": pm2.index.tolist(), "v": [limpio(x) for x in pm2.values]}
+    construccion["kpi_permisos_v_ia"] = {"p": p_pm, "v": v_pm}
+    construccion["fuentes"] += info("permisos_m2", "permisos_n")
+
+    turismo["hoteles"] = _alinear(df, {"eoh_residentes": "Residentes", "eoh_no_residentes": "No residentes"}, desde="2016-01")
+    turismo["fuentes"] += info("eoh_total", "eoh_residentes", "eoh_no_residentes")
+
+    expectativas = {
+        "ice": _alinear(df, {"ice_super": "Supermercados y mayoristas", "ice_industria": "Industria manufacturera"}),
+        "fuentes": info("ice_super", "ice_industria"),
+    }
+
+    dt, dg, db = _serie(df, "deuda_total"), _serie(df, "deuda_gobierno"), _serie(df, "deuda_bcra")
+    priv = (dt - dg - db).dropna()
+    deuda = pd.DataFrame({"Gobierno general": dg, "Banco Central": db, "Sector privado y bancos": priv}).dropna().sort_index()
+    deuda = deuda[deuda.index >= "2016"] / 1000
+    dt16 = dt.dropna().sort_index()
+    externo = {
+        "cuenta": _alinear(df, {"bdp_cc": "Cuenta corriente", "bdp_bienes": "Bienes", "bdp_servicios": "Servicios",
+                                "bdp_ingreso_primario": "Ingreso primario"}, desde="2016"),
+        "deuda": {"p": deuda.index.tolist(), "series": {c: [limpio(x) for x in deuda[c]] for c in deuda.columns}},
+        "kpi_deuda": {"p": dt16.index[-1] if len(dt16) else None, "v": limpio(dt16.iloc[-1] / 1000) if len(dt16) else None,
+                      "v_ia": limpio(dt16.iloc[-1] / 1000 - dt16.iloc[-5] / 1000) if len(dt16) > 4 else None},
+        "fuentes": info("bdp_cc", "bdp_bienes", "bdp_servicios", "bdp_ingreso_primario", "deuda_total"),
+    }
     return {"consumo": consumo, "construccion": construccion, "industria": industria,
-            "turismo": turismo, "macro": macro, "servicios": servicios}
+            "turismo": turismo, "macro": macro, "servicios": servicios,
+            "expectativas": expectativas, "externo": externo}
 
 
 def semaforo_extra(m: dict | None) -> list[dict]:
@@ -638,11 +668,26 @@ def explorador_extra(tablas: list[dict]) -> None:
     })
 
 
+def _n(x) -> int:
+    return len(x) if isinstance(x, list) else int(x or 0)
+
+
 def main() -> None:
     SALIDA.mkdir(parents=True, exist_ok=True)
     estado = json.loads((DIR / "estado.json").read_text(encoding="utf-8"))
     archivo_es = DIR / "estado_series.json"
     estado_series = json.loads(archivo_es.read_text(encoding="utf-8")) if archivo_es.exists() else None
+    archivo_ep = DIR / "estado_planillas.json"
+    if archivo_ep.exists():
+        ep = json.loads(archivo_ep.read_text(encoding="utf-8"))
+        if estado_series is None:
+            estado_series = {"generado": ep["generado"], "fuente": ep["fuente"], "series_ok": 0, "series_total": 0,
+                             "atrasadas": 0, "series": []}
+        estado_series = {**estado_series,
+                         "series_ok": estado_series["series_ok"] + ep["series_ok"],
+                         "series_total": estado_series["series_total"] + ep["series_total"],
+                         "atrasadas": _n(estado_series["atrasadas"]) + _n(ep["atrasadas"]),
+                         "series": estado_series["series"] + ep["series"]}
     m = mas(estado_series)
     if m:
         (SALIDA / "mas.json").write_text(json.dumps(m, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -668,7 +713,7 @@ def main() -> None:
     if estado_series:
         catalogo["series_extra"] = {k: estado_series[k] for k in ("generado", "fuente", "series_ok", "series_total", "atrasadas")}
         catalogo["series_extra"]["series"] = [
-            {k: x.get(k) for k in ("clave", "id", "grupo", "nombre", "unidad", "ok", "ultimo", "atrasada")}
+            {k: x.get(k) for k in ("clave", "id", "grupo", "nombre", "unidad", "ok", "ultimo", "atrasada", "fuente", "discontinuada")}
             for x in estado_series["series"]
         ]
     (SALIDA / "catalogo.json").write_text(json.dumps(catalogo, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -677,7 +722,11 @@ def main() -> None:
     descargas = SITIO / "datos"
     descargas.mkdir(exist_ok=True)
     for f in DIR.glob("*.parquet"):
-        shutil.copy2(f, descargas / f.name)
+        if f.name != "planillas.parquet":
+            shutil.copy2(f, descargas / f.name)
+    extra = _extra()
+    if extra is not None:
+        extra.drop(columns=["p"]).to_parquet(descargas / "series_extra.parquet", index=False)
     explorador(estado)
 
     tam = (SALIDA / "tableros.json").stat().st_size

@@ -3,7 +3,7 @@
 Corre como último paso del workflow: si falla, GitHub te manda un mail
 avisando que la corrida no salió bien. Motivos:
 - algún servicio del Catálogo API-INDEC no se pudo actualizar;
-- alguna serie de datos.gob.ar no respondió;
+- alguna serie de datos.gob.ar o de las planillas del INDEC no se pudo leer;
 - al token le quedan menos de DIAS_AVISO días;
 - (solo los lunes, para no mandar un mail por día) hay series atrasadas.
 """
@@ -43,10 +43,21 @@ if archivo_series.exists():
 else:
     problemas.append("no se generó estado_series.json (falló la ingesta de datos.gob.ar)")
 
+archivo_planillas = DIR / "estado_planillas.json"
+if archivo_planillas.exists():
+    ep = json.loads(archivo_planillas.read_text(encoding="utf-8"))
+    for s in ep["series"]:
+        if not s.get("ok"):
+            problemas.append(f"planilla {s['id']} / {s['clave']}: {s.get('error')}")
+        elif s.get("atrasada"):
+            avisos.append(f"planilla {s['clave']} atrasada: último dato {s.get('ultimo')}")
+else:
+    problemas.append("no se generó estado_planillas.json (falló la lectura de planillas del INDEC)")
+
 for a in avisos:
     print(f"::warning::{a}")
 if avisos and date.today().weekday() == 0:  # lunes: resumen semanal por mail
-    problemas.append(f"{len(avisos)} serie(s) de datos.gob.ar atrasadas (ver avisos)")
+    problemas.append(f"{len(avisos)} serie(s) atrasadas (ver avisos)")
 
 if problemas:
     for p in problemas:
