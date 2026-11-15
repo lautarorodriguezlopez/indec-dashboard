@@ -410,7 +410,7 @@
       X.series.map((x) => `<tr>
         <td class="wrap"><b>${esc(x.nombre)}</b><br><span class="nota">${esc(x.unidad)}</span></td>
         <td>${esc(x.grupo)}</td>
-        <td>${esc(x.ultimo ? fmtP(String(x.ultimo).slice(0, 7)) : "—")}</td>
+        <td>${esc(x.ultimo ? fmtP(String(x.ultimo)) : "—")}</td>
         <td>${!x.ok ? '<span class="falla">✕ Falló</span>' : x.discontinuada ? '<span class="nota">Discontinuada</span>' : x.atrasada ? '<span class="atraso">● Atrasada</span>' : '<span class="ok">✓ Al día</span>'}</td>
         <td>${x.fuente === "planilla INDEC"
           ? `<a href="https://www.indec.gob.ar/ftp/cuadros/economia/${encodeURIComponent(x.id)}" rel="noopener noreferrer">Planilla</a>`

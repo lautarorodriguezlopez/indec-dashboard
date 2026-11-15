@@ -668,6 +668,18 @@ def explorador_extra(tablas: list[dict]) -> None:
     })
 
 
+def _periodo(ultimo: str | None, frecuencia: str | None) -> str | None:
+    """Normaliza el último período: '2026-04-01' trimestral -> '2026-T2'; mensual -> '2026-04'."""
+    if not ultimo:
+        return None
+    u = str(ultimo)
+    if "-T" in u:
+        return u
+    if frecuencia == "T" and len(u) >= 7:
+        return f"{u[:4]}-T{(int(u[5:7]) - 1) // 3 + 1}"
+    return u[:7]
+
+
 def _n(x) -> int:
     return len(x) if isinstance(x, list) else int(x or 0)
 
@@ -713,7 +725,8 @@ def main() -> None:
     if estado_series:
         catalogo["series_extra"] = {k: estado_series[k] for k in ("generado", "fuente", "series_ok", "series_total", "atrasadas")}
         catalogo["series_extra"]["series"] = [
-            {k: x.get(k) for k in ("clave", "id", "grupo", "nombre", "unidad", "ok", "ultimo", "atrasada", "fuente", "discontinuada")}
+            {**{k: x.get(k) for k in ("clave", "id", "grupo", "nombre", "unidad", "ok", "atrasada", "fuente", "discontinuada")},
+             "ultimo": _periodo(x.get("ultimo"), x.get("frecuencia"))}
             for x in estado_series["series"]
         ]
     (SALIDA / "catalogo.json").write_text(json.dumps(catalogo, ensure_ascii=False, indent=1), encoding="utf-8")
