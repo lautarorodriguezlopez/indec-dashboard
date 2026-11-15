@@ -605,9 +605,149 @@ def mas(estado_series: dict | None) -> dict | None:
                       "v_ia": limpio(dt16.iloc[-1] / 1000 - dt16.iloc[-5] / 1000) if len(dt16) > 4 else None},
         "fuentes": info("bdp_cc", "bdp_bienes", "bdp_servicios", "bdp_ingreso_primario", "deuda_total"),
     }
+    # Fase 3: empleo registrado, ingresos en términos reales y cuentas públicas
+    empleo = ingresos = fiscal = None
+    sipa = _serie(df, "sipa_total_desest").dropna()
+    if len(sipa):
+        p_s, v_s = _var(sipa, 12)
+        empleo = {
+            "total": _alinear(df, {"sipa_total_desest": "Total registrados"}, desde="2016-01"),
+            "composicion": _alinear(df, {"sipa_privados": "Asalariados privados", "sipa_monotributo": "Monotributistas",
+                                         "sipa_publicos_desest": "Asalariados públicos"}, desde="2016-01"),
+            "kpi": {"p": p_s, "v": limpio(sipa.iloc[-1]), "dif_ia": limpio(sipa.iloc[-1] - sipa.iloc[-13]) if len(sipa) > 12 else None,
+                    "v_ia": v_s},
+            "fuentes": info("sipa_total_desest", "sipa_privados", "sipa_monotributo", "sipa_publicos_desest"),
+        }
+    ipc = _ipc_nacional()
+    if ipc is not None:
+        hasta = ipc.index.max()
+        reales = {}
+        for c, n in (("ripte", "RIPTE"), ("smvm", "Salario mínimo"), ("haber_minimo", "Jubilación mínima")):
+            s = _serie(df, c).dropna()
+            s = s[(s.index >= "2017-01") & (s.index <= hasta)]
+            r = (s / ipc.reindex(s.index)).dropna()
+            if len(r):
+                reales[n] = r
+        if reales:
+            piv = pd.DataFrame(reales).sort_index()
+            base = "2017-11" if "2017-11" in piv.index else piv.index[0]
+            piv = piv / piv.loc[base] * 100
+            kpis = {}
+            for n in piv.columns:
+                s = piv[n].dropna()
+                kpis[n] = {"p": s.index[-1], "v_ia": limpio((s.iloc[-1] / s.iloc[-13] - 1) * 100) if len(s) > 12 else None,
+                           "nominal": limpio(_serie(df, {"RIPTE": "ripte", "Salario mínimo": "smvm",
+                                                         "Jubilación mínima": "haber_minimo"}[n]).dropna().loc[:s.index[-1]].iloc[-1])}
+            ingresos = {"reales": {"p": piv.index.tolist(), "series": {c: [limpio(x) for x in piv[c]] for c in piv.columns}},
+                        "base": base, "kpi": kpis, "fuentes": info("ripte", "smvm", "haber_minimo")}
+    rec = _serie(df, "recaudacion_ia").dropna()
+    prim = _serie(df, "resultado_primario").dropna()
+    if len(rec) or len(prim):
+        # Resultado primario acumulado en 12 meses, en millones de pesos de hoy (deflactado por IPC)
+        acum = None
+        if len(prim) and ipc is not None:
+            pr = prim[prim.index <= ipc.index.max()]
+            real = (pr / ipc.reindex(pr.index) * ipc.iloc[-1]).dropna()
+            acum = (real.rolling(12).sum() / 1e6).dropna()
+            acum = acum[acum.index >= "2018-01"]
+        fiscal = {
+            "recaudacion_ia": {"p": rec[rec.index >= "2018-01"].index.tolist(), "v": [limpio(x) for x in rec[rec.index >= "2018-01"]]},
+            "primario": {"p": prim[prim.index >= "2018-01"].index.tolist(), "v": [limpio(x / 1e3) for x in prim[prim.index >= "2018-01"]]},
+            "primario_12m": {"p": acum.index.tolist(), "v": [limpio(x) for x in acum]} if acum is not None else None,
+            "kpi_rec": {"p": rec.index[-1] if len(rec) else None, "v": limpio(rec.iloc[-1]) if len(rec) else None},
+            "kpi_prim": {"p": prim.index[-1] if len(prim) else None, "v": limpio(prim.iloc[-1] / 1e3) if len(prim) else None},
+            "fuentes": info("recaudacion", "recaudacion_ia", "resultado_primario"),
+        }
     return {"consumo": consumo, "construccion": construccion, "industria": industria,
             "turismo": turismo, "macro": macro, "servicios": servicios,
-            "expectativas": expectativas, "externo": externo}
+            "expectativas": expectativas, "externo": externo,
+            "empleo": empleo, "ingresos": ingresos, "fiscal": fiscal}
+
+
+def _ipc_nacional() -> pd.Series | None:
+    """Índice del IPC nacional, nivel general (base dic-16 = 100), indexado por 'YYYY-MM'."""
+    try:
+        ipc = leer("ipc")
+    except Exception:  # noqa: BLE001
+        return None
+    d = ipc[(ipc["nivel"] == "Nivel General") & (ipc["region"] == "Nacional") & (ipc["tipo_de_indicador"] == "Indice")]
+    if d.empty:
+        return None
+    d = d.assign(p=periodo_mes(d)).dropna(subset=["valor"]).drop_duplicates("p", keep="last").sort_values("p")
+    return pd.Series(d["valor"].astype(float).values, index=d["p"].values)
+
+
+# ------------------------------------------------------------------------ BCRA
+def bcra() -> dict | None:
+    """Variables del BCRA para la pestaña Dinero: semanales (último dato de cada semana)
+    para los gráficos y el último dato diario para las tarjetas. Liviano a propósito."""
+    archivo = DIR / "bcra.parquet"
+    if not archivo.exists():
+        return None
+    df = pd.read_parquet(archivo)
+    df["fecha"] = pd.to_datetime(df["fecha"])
+    archivo_e = DIR / "estado_bcra.json"
+    est = {s["clave"]: s for s in json.loads(archivo_e.read_text(encoding="utf-8"))["series"]} if archivo_e.exists() else {}
+
+    def diaria(clave: str) -> pd.Series:
+        d = df[df["clave"] == clave].sort_values("fecha").drop_duplicates("fecha", keep="last")
+        return pd.Series(d["valor"].astype(float).values, index=d["fecha"].values)
+
+    def semanal(claves: dict[str, str], desde: str = "2018-01-01") -> dict:
+        cols = {}
+        for c, n in claves.items():
+            s = diaria(c)
+            if len(s):
+                cols[n] = s.resample("W-FRI").last()
+        if not cols:
+            return {"p": [], "series": {}}
+        piv = pd.DataFrame(cols).sort_index()
+        piv = piv[piv.index >= desde].dropna(how="all")
+        return {"p": [x.strftime("%Y-%m-%d") for x in piv.index],
+                "series": {c: [limpio(x) for x in piv[c]] for c in piv.columns}}
+
+    def kpi(clave: str, dias_comp: int = 365) -> dict:
+        s = diaria(clave).dropna()
+        if not len(s):
+            return {"p": None, "v": None, "v_comp": None}
+        ref = s[s.index <= s.index[-1] - pd.Timedelta(days=dias_comp)]
+        return {"p": s.index[-1].strftime("%Y-%m-%d"), "v": limpio(s.iloc[-1]),
+                "v_comp": limpio(ref.iloc[-1]) if len(ref) else None}
+
+    # Crecimiento real de préstamos y depósitos: nominal mensual deflactado por IPC
+    credito = None
+    ipc = _ipc_nacional()
+    if ipc is not None:
+        cols = {}
+        for c, n in (("prestamos_privados", "Préstamos al sector privado"), ("depositos", "Depósitos")):
+            s = diaria(c)
+            if len(s):
+                m = s.resample("MS").mean()
+                m.index = m.index.strftime("%Y-%m")
+                r = (m / ipc.reindex(m.index)).dropna()
+                cols[n] = r
+        if cols:
+            piv = pd.DataFrame(cols).sort_index()
+            piv = piv[piv.index >= "2018-01"]
+            base = piv.index[0]
+            piv = piv / piv.loc[base] * 100
+            credito = {"p": piv.index.tolist(), "series": {c: [limpio(x) for x in piv[c]] for c in piv.columns}, "base": base}
+
+    return {
+        "dolar": semanal({"tc_mayorista": "Mayorista", "tc_minorista": "Minorista", "banda_piso": "Banda: piso",
+                          "banda_techo": "Banda: techo"}),
+        "reservas": semanal({"reservas": "Reservas"}),
+        "tasas": semanal({"badlar": "BADLAR", "tamar": "TAMAR", "tasa_plazo_fijo": "Plazo fijo 30 días",
+                          "tasa_personales": "Préstamos personales"}),
+        "m2": semanal({"m2_privado_ia": "M2 privado"}),
+        "credito": credito,
+        "expectativas": semanal({"inflacion_esperada": "Inflación esperada a 12 meses"}, desde="2018-01-01"),
+        "indices": semanal({"uva": "UVA", "icl": "ICL"}, desde="2020-07-01"),
+        "kpi": {c: kpi(c) for c in ("tc_mayorista", "tc_minorista", "reservas", "badlar", "tasa_plazo_fijo",
+                                    "inflacion_esperada", "banda_techo", "uva")},
+        "fuentes": [{"clave": c, "nombre": s.get("nombre", c), "ultimo": s.get("ultimo"), "atrasada": bool(s.get("atrasada"))}
+                    for c, s in est.items()],
+    }
 
 
 def semaforo_extra(m: dict | None) -> list[dict]:
@@ -656,7 +796,7 @@ def explorador_extra(tablas: list[dict]) -> None:
             dims.append({"col": c, "label": label, "valores": vals, "numerica": False})
     tablas.append({
         "tabla": "series_extra",
-        "titulo": "Más indicadores del INDEC (consumo, construcción, industria, turismo, macro)",
+        "titulo": "Más indicadores (consumo, construcción, industria, turismo, macro, empleo, ingresos y cuentas públicas)",
         "filas": int(len(df)),
         "ultimo_periodo": pd.to_datetime(df["fecha"]).max().strftime("%Y-%m"),
         "tiempo": "mes",
@@ -666,6 +806,28 @@ def explorador_extra(tablas: list[dict]) -> None:
         "columnas": [{"col": "grupo", "label": "Grupo"}, {"col": "nombre", "label": "Serie"},
                      {"col": "unidad", "label": "Unidad"}, {"col": "valor", "label": "Valor"}],
     })
+
+
+    archivo = SITIO / "datos" / "bcra.parquet"
+    if archivo.exists():
+        df = pd.read_parquet(archivo)
+        df["fecha"] = pd.to_datetime(df["fecha"])
+        df["anio"] = df["fecha"].dt.year.astype("int32")
+        df["mes"] = df["fecha"].dt.month.astype("int32")
+        df.to_parquet(archivo, index=False)
+        tablas.append({
+            "tabla": "bcra",
+            "titulo": "BCRA: dólar, reservas, tasas, dinero, crédito e índices (datos diarios)",
+            "filas": int(len(df)),
+            "ultimo_periodo": df["fecha"].max().strftime("%Y-%m"),
+            "tiempo": "mes",
+            "anios": [int(df["anio"].min()), int(df["anio"].max())],
+            "dims": [{"col": c, "label": lb, "valores": sorted(df[c].dropna().astype(str).unique().tolist()), "numerica": False}
+                     for c, lb in (("grupo", "Grupo"), ("nombre", "Variable"), ("unidad", "Unidad"))],
+            "medidas": [{"col": "valor", "label": "Valor", "sumable": False}],
+            "columnas": [{"col": "fecha", "label": "Fecha"}, {"col": "grupo", "label": "Grupo"}, {"col": "nombre", "label": "Variable"},
+                         {"col": "unidad", "label": "Unidad"}, {"col": "valor", "label": "Valor"}],
+        })
 
 
 def _periodo(ultimo: str | None, frecuencia: str | None) -> str | None:
@@ -705,6 +867,11 @@ def main() -> None:
         (SALIDA / "mas.json").write_text(json.dumps(m, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         print(f"mas.json {(SALIDA / 'mas.json').stat().st_size / 1024:.0f} KB")
 
+    b = bcra()
+    if b:
+        (SALIDA / "bcra.json").write_text(json.dumps(b, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        print(f"bcra.json {(SALIDA / 'bcra.json').stat().st_size / 1024:.0f} KB")
+
     pr, bo, pu = precios(), bolsillo(), pulso()
     tableros = {
         "generado": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -729,6 +896,12 @@ def main() -> None:
              "ultimo": _periodo(x.get("ultimo"), x.get("frecuencia"))}
             for x in estado_series["series"]
         ]
+    archivo_eb = DIR / "estado_bcra.json"
+    if archivo_eb.exists():
+        eb = json.loads(archivo_eb.read_text(encoding="utf-8"))
+        catalogo["bcra"] = {k: eb[k] for k in ("generado", "fuente", "series_ok", "series_total", "atrasadas")}
+        catalogo["bcra"]["series"] = [{k: x.get(k) for k in ("clave", "id", "grupo", "nombre", "unidad", "ok", "atrasada", "ultimo")}
+                                      for x in eb["series"]]
     (SALIDA / "catalogo.json").write_text(json.dumps(catalogo, ensure_ascii=False, indent=1), encoding="utf-8")
 
     # Parquet descargables desde el sitio (no se suben al repo, solo al deploy)

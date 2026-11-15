@@ -6,10 +6,11 @@
   const COL = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)"];
   const NS = "http://www.w3.org/2000/svg";
   const tip = document.getElementById("tooltip");
-  const estado = { tab: "portada", region: "Nacional", rango: { precios: "3", bolsillo: "todo", actividad: "3", mas: "3" } };
+  const estado = { tab: "portada", region: "Nacional", rango: { precios: "3", bolsillo: "todo", actividad: "3", dinero: "3", mas: "3" } };
   let T = null; // tableros.json
   let C = null; // catalogo.json
   let M = null; // mas.json (se baja recién al abrir la pestaña)
+  let D = null; // bcra.json (ídem)
 
   // ---------------------------------------------------------------- formato
   // Todo texto que viene de los datos pasa por esc() antes de ir a innerHTML.
@@ -24,14 +25,16 @@
     if (!p) return "—";
     const m = /^(\d{4})-(\d{2})$/.exec(p);
     if (m) return corto ? `${MESES[+m[2] - 1]}-${m[1].slice(2)}` : `${MESES[+m[2] - 1]} ${m[1]}`;
+    const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(p);
+    if (f) return corto ? `${MESES[+f[2] - 1]}-${f[1].slice(2)}` : `${+f[3]} ${MESES[+f[2] - 1]} ${f[1]}`;
     const q = /^(\d{4})-([TS])(\d)$/.exec(p);
     if (q && corto) return `${q[2]}${q[3]}-${q[1].slice(2)}`;
     if (q) return q[2] === "T" ? `${q[3]}.º trim. ${q[1]}` : `${q[3]}.º sem. ${q[1]}`;
     return p;
   }
   function ordinal(p) {
-    let m = /^(\d{4})-(\d{2})$/.exec(p);
-    if (m) return +m[1] * 12 + +m[2];
+    let m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(p);
+    if (m) return +m[1] * 12 + +m[2] + (m[3] ? (+m[3] - 1) / 31 : 0);
     m = /^(\d{4})-([TS])(\d)$/.exec(p);
     if (m) return +m[1] * 12 + +m[3] * (m[2] === "T" ? 3 : 6);
     return +p.slice(0, 4) * 12;
@@ -156,11 +159,14 @@
     const nEt = Math.max(2, Math.floor((W - m.l - m.r) / 90));
     const largo = p.length > 30;
     let cand = p.map((_, i) => i);
-    if (largo) cand = cand.filter((i) => /-(01|T1|S1)$/.test(p[i]));
+    const diaria = /^\d{4}-\d{2}-\d{2}$/.test(p[0] || "");
+    const corteD = p.length > 120 ? 4 : 7; // fechas: etiqueta por año o por mes según el largo
+    if (diaria) cand = cand.filter((i) => i > 0 && p[i].slice(0, corteD) !== p[i - 1].slice(0, corteD));
+    else if (largo) cand = cand.filter((i) => /-(01|T1|S1)$/.test(p[i]));
     const paso = Math.max(1, Math.ceil(cand.length / nEt));
     cand.filter((_, k) => k % paso === 0).forEach((i) => {
       const t = el("text", { x: x(i), y: H - 6, "text-anchor": "middle" }, svg);
-      t.textContent = largo ? p[i].slice(0, 4) : fmtP(p[i], true);
+      t.textContent = diaria ? (corteD === 4 ? p[i].slice(0, 4) : fmtP(p[i].slice(0, 7), true)) : largo ? p[i].slice(0, 4) : fmtP(p[i], true);
     });
 
     series.forEach((s) => {
@@ -415,6 +421,18 @@
         <td>${x.fuente === "planilla INDEC"
           ? `<a href="https://www.indec.gob.ar/ftp/cuadros/economia/${encodeURIComponent(x.id)}" rel="noopener noreferrer">Planilla</a>`
           : `<a href="https://apis.datos.gob.ar/series/api/series/?ids=${encodeURIComponent(x.id)}&amp;format=csv" rel="noopener noreferrer">CSV</a>`}</td></tr>`).join("") + "</tbody>";
+    const B = C.bcra;
+    const tb = document.getElementById("tabla-bcra");
+    if (!B) { tb.replaceChildren(); return; }
+    document.getElementById("cat-bcra-lead").textContent =
+      `${B.series_ok} de ${B.series_total} variables actualizadas${B.atrasadas ? ` · ${B.atrasadas} sin dato nuevo hace varios días` : ""}. Se pueden filtrar y bajar desde el Explorador ("BCRA").`;
+    tb.innerHTML = `<thead><tr><th>Variable</th><th>Grupo</th><th>Último dato</th><th>Estado</th><th>Fuente</th></tr></thead><tbody>` +
+      B.series.map((x) => `<tr>
+        <td class="wrap"><b>${esc(x.nombre)}</b><br><span class="nota">${esc(x.unidad)}</span></td>
+        <td>${esc(x.grupo)}</td>
+        <td>${esc(x.ultimo ? fmtP(String(x.ultimo)) : "—")}</td>
+        <td>${!x.ok ? '<span class="falla">✕ Falló</span>' : x.atrasada ? '<span class="atraso">● Atrasada</span>' : '<span class="ok">✓ Al día</span>'}</td>
+        <td><a href="https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/${encodeURIComponent(x.id)}" rel="noopener noreferrer">JSON</a></td></tr>`).join("") + "</tbody>";
   }
 
   // ---------------------------------------------------------------- más indicadores
@@ -437,6 +455,9 @@
       { t: "Capacidad instalada industrial", v: pct(ind.kpi.v), d: `${signo(ind.kpi.pp_ia)} pp en 12 meses · ${fmtP(ind.kpi.p)}` },
       { t: "PIB", v: signo(pibU.v) + " %", d: `interanual · ${fmtP(pibU.p)}` },
       ...(cn.kpi_permisos_v_ia ? [{ t: "Permisos de edificación", v: signo(cn.kpi_permisos_v_ia.v) + " %", d: `superficie autorizada, interanual · ${fmtP(cn.kpi_permisos_v_ia.p)}` }] : []),
+      ...(M.empleo ? [{ t: "Trabajadores registrados", v: num(M.empleo.kpi.v / 1000, 2) + " M", d: `${signo(M.empleo.kpi.dif_ia, 0)} mil en 12 meses · ${fmtP(M.empleo.kpi.p)}` }] : []),
+      ...(M.ingresos && M.ingresos.kpi.RIPTE ? [{ t: "Salario promedio real (RIPTE)", v: signo(M.ingresos.kpi.RIPTE.v_ia) + " %", d: `en 12 meses · ${fmtP(M.ingresos.kpi.RIPTE.p)}` }] : []),
+      ...(M.fiscal && M.fiscal.kpi_prim.v != null ? [{ t: "Resultado primario del mes", v: (M.fiscal.kpi_prim.v < 0 ? "−" : "") + "$ " + num(Math.abs(M.fiscal.kpi_prim.v) / 1000, 2) + " billones", d: `Sector Público Nacional · ${fmtP(M.fiscal.kpi_prim.p)}` }] : []),
       ...(ex ? [{ t: "Deuda externa bruta", v: "USD " + num(ex.kpi_deuda.v, 1) + " mil M", d: `${signo(ex.kpi_deuda.v_ia)} mil M en 12 meses · ${fmtP(ex.kpi_deuda.p)}` }] : []),
     ]);
     const ser = (bloque) => Object.keys(bloque.series).map((n) => ({ nombre: n, valores: bloque.series[n] }));
@@ -452,6 +473,35 @@
       titulo: "Ventas online en supermercados", desc: "% de las ventas que se hacen por canales online.",
       p: co.online.p, series: [{ nombre: "Online", valores: co.online.v }], rango, cero: true, fmt: pct,
     });
+    const em = M.empleo, ig = M.ingresos, fi = M.fiscal;
+    if (em) {
+      lineas(document.getElementById("c-sipa"), {
+        titulo: "Trabajadores registrados", desc: "Miles de personas con empleo registrado (asalariados, monotributistas, autónomos y casas particulares), desestacionalizado.",
+        p: em.total.p, series: ser(em.total), rango, fmt: (v) => num(v, 0) + " mil", fmtEje: (v) => num(v, 0),
+      });
+      lineas(document.getElementById("c-sipa-comp"), {
+        titulo: "Por tipo de trabajo", desc: "Miles de personas. Asalariados privados y monotributistas con estacionalidad; públicos desestacionalizados.",
+        p: em.composicion.p, series: ser(em.composicion), rango, cero: true, fmt: (v) => num(v, 0) + " mil", fmtEje: (v) => num(v, 0),
+      });
+    }
+    if (ig) lineas(document.getElementById("c-ingresos"), {
+      titulo: "Salario promedio, salario mínimo y jubilación mínima, en términos reales",
+      desc: `Montos en pesos deflactados por el IPC nacional, ${fmtP(ig.base)} = 100. Por debajo de 100 compran menos que entonces.`,
+      p: ig.reales.p, series: ser(ig.reales), rango, fmt: (v) => num(v),
+      nota: "RIPTE: remuneración promedio de los trabajadores registrados estables. La jubilación mínima no incluye bonos extraordinarios.",
+    });
+    if (fi) {
+      if (fi.primario_12m) lineas(document.getElementById("c-primario"), {
+        titulo: "Resultado primario del Sector Público Nacional", desc: "Acumulado de los últimos 12 meses, en billones de pesos de hoy (deflactado por IPC). Positivo: superávit antes de pagar intereses de la deuda.",
+        p: fi.primario_12m.p, series: [{ nombre: "Resultado primario (12 meses)", valores: fi.primario_12m.v }], rango, cero: true,
+        fmt: (v) => "$ " + num(v, 1) + " billones", fmtEje: (v) => num(v, 0),
+      });
+      lineas(document.getElementById("c-recaudacion"), {
+        titulo: "Recaudación tributaria", desc: "Variación % interanual de la recaudación total (nominal, en pesos corrientes).",
+        p: fi.recaudacion_ia.p, series: [{ nombre: "Recaudación interanual", valores: fi.recaudacion_ia.v }], rango, cero: true, fmt: (v) => signo(v) + " %",
+        nota: "Es una variación nominal: para saber si crece en términos reales hay que compararla con la inflación interanual de la pestaña Precios.",
+      });
+    }
     lineas(document.getElementById("c-isac"), {
       titulo: "Actividad de la construcción (ISAC)", desc: "Índice 2004 = 100, desestacionalizado.",
       p: cn.isac.p, series: ser(cn.isac), rango, fmt: (v) => num(v),
@@ -506,10 +556,73 @@
       titulo: "Servicios públicos", desc: "Índice de servicios públicos (transporte, peajes, telefonía, residuos y otros), tendencia-ciclo, 2004 = 100.",
       p: sv.issp.p, series: ser(sv.issp), rango, fmt: (v) => num(v),
     });
-    const atrasadas = [co, cn, ind, tu, ma, sv, ex, xp].filter(Boolean).flatMap((b) => b.fuentes).filter((f) => f.atrasada);
+    const atrasadas = [co, cn, ind, tu, ma, sv, ex, xp, em, ig, fi].filter(Boolean).flatMap((b) => b.fuentes).filter((f) => f.atrasada);
     document.getElementById("mas-nota").textContent =
-      "Fuente: INDEC, vía la API de Series de Tiempo de datos.gob.ar y las planillas que el INDEC publica junto a cada informe (permisos de edificación, hoteles, confianza empresarial, balanza de pagos y deuda externa)." +
+      "Fuentes: INDEC, vía la API de Series de Tiempo de datos.gob.ar y las planillas que el INDEC publica junto a cada informe (permisos de edificación, hoteles, confianza empresarial, balanza de pagos y deuda externa). Empleo registrado: Secretaría de Trabajo (SIPA). Ingresos: Secretaría de Seguridad Social y Secretaría de Trabajo. Cuentas públicas: Ministerio de Economía (con datos de ARCA)." +
       (atrasadas.length ? ` Atención: ${atrasadas.length} serie(s) están atrasadas (${atrasadas.map((f) => f.nombre).join(", ")}).` : "");
+  }
+
+
+  // ---------------------------------------------------------------- dólar y tasas (BCRA)
+  const fecha = (p) => (p ? fmtP(p) : "—");
+  function renderDinero() {
+    if (!D) {
+      fetch("data/bcra.json")
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then((d) => { D = d; if (estado.tab === "dinero") renderDinero(); })
+        .catch(() => { document.getElementById("dinero-nota").textContent = "No se pudieron cargar estos datos. Recargá la página."; });
+      return;
+    }
+    const rango = estado.rango.dinero, K = D.kpi;
+    const varPct = (k) => (k.v != null && k.v_comp ? signo((k.v / k.v_comp - 1) * 100) + " % en 12 meses" : "");
+    const ser = (b) => Object.keys(b.series).map((n) => ({ nombre: n, valores: b.series[n] }));
+    const brecha = K.tc_minorista.v && K.tc_mayorista.v ? (K.tc_minorista.v / K.tc_mayorista.v - 1) * 100 : null;
+    const aTecho = K.banda_techo.v && K.tc_mayorista.v ? (K.banda_techo.v / K.tc_mayorista.v - 1) * 100 : null;
+    kpis(document.getElementById("kpi-dinero"), [
+      { t: "Dólar mayorista", v: pesos(K.tc_mayorista.v), d: `${varPct(K.tc_mayorista)} · ${fecha(K.tc_mayorista.p)}` },
+      { t: "Dólar minorista", v: pesos(K.tc_minorista.v), d: `${brecha != null ? signo(brecha) + " % sobre el mayorista" : ""} · ${fecha(K.tc_minorista.p)}` },
+      ...(aTecho != null ? [{ t: "Distancia al techo de la banda", v: num(aTecho) + " %", d: `techo ${pesos(K.banda_techo.v)} · ${fecha(K.banda_techo.p)}` }] : []),
+      { t: "Reservas internacionales", v: "USD " + num(K.reservas.v / 1000, 1) + " mil M", d: `${K.reservas.v_comp ? signo((K.reservas.v - K.reservas.v_comp) / 1000) + " mil M en 12 meses" : ""} · ${fecha(K.reservas.p)}` },
+      { t: "Plazo fijo a 30 días", v: num(K.tasa_plazo_fijo.v) + " %", d: `nominal anual · ${fecha(K.tasa_plazo_fijo.p)}` },
+      { t: "Inflación esperada", v: num(K.inflacion_esperada.v) + " %", d: `próximos 12 meses (REM) · ${fmtP((K.inflacion_esperada.p || "").slice(0, 7))}` },
+    ]);
+    lineas(document.getElementById("c-dolar"), {
+      titulo: "Dólar oficial y bandas cambiarias", desc: "Pesos por dólar, último dato de cada semana. Las bandas son el piso y el techo dentro de los que el BCRA deja flotar el mayorista.",
+      p: D.dolar.p, series: ser(D.dolar), rango, fmt: pesos, fmtEje: (v) => num(v, 0),
+      nota: "Las bandas rigen desde abril de 2025: antes no hay datos de piso y techo.",
+    });
+    lineas(document.getElementById("c-reservas"), {
+      titulo: "Reservas internacionales del BCRA", desc: "Miles de millones de USD, último dato de cada semana (reservas brutas).",
+      p: D.reservas.p, series: [{ nombre: "Reservas", valores: D.reservas.series.Reservas.map((v) => (v == null ? null : v / 1000)) }],
+      rango, fmt: (v) => "USD " + num(v, 1) + " mil M", fmtEje: (v) => num(v, 0),
+    });
+    lineas(document.getElementById("c-tasas"), {
+      titulo: "Tasas de interés", desc: "% nominal anual. BADLAR y TAMAR: lo que pagan los bancos privados por depósitos grandes; plazo fijo: lo que recibe un ahorrista; personales: lo que cobra un banco por prestar.",
+      p: D.tasas.p, series: ser(D.tasas), rango, cero: true, fmt: (v) => num(v) + " %",
+      nota: "Para comparar con la inflación, una tasa nominal anual de 30 % equivale a un 2,5 % mensual.",
+    });
+    lineas(document.getElementById("c-expectativas"), {
+      titulo: "Inflación esperada", desc: "Mediana del Relevamiento de Expectativas de Mercado (REM): % de inflación que esperan los analistas para los próximos 12 meses.",
+      p: D.expectativas.p.map((x) => x.slice(0, 7)), series: ser(D.expectativas), rango, cero: true, fmt: (v) => num(v) + " %",
+    });
+    lineas(document.getElementById("c-m2"), {
+      titulo: "Cantidad de dinero (M2 privado)", desc: "Variación % interanual del promedio de 30 días: efectivo más cuentas a la vista del sector privado.",
+      p: D.m2.p, series: ser(D.m2), rango, cero: true, fmt: (v) => signo(v) + " %",
+    });
+    if (D.credito) lineas(document.getElementById("c-credito"), {
+      titulo: "Préstamos y depósitos en términos reales", desc: `Saldos en pesos deflactados por el IPC nacional, ${fmtP(D.credito.base)} = 100. Por encima de 100 hay más crédito (o depósitos) que entonces, a valores de hoy.`,
+      p: D.credito.p, series: ser(D.credito), rango, fmt: (v) => num(v),
+    });
+    lineas(document.getElementById("c-indices"), {
+      titulo: "UVA e ICL", desc: "Índices con los que se ajustan créditos hipotecarios (UVA, en pesos) y alquileres firmados con la ley anterior (ICL). Último dato de cada semana.",
+      p: D.indices.p, series: [{ nombre: "UVA (pesos)", valores: D.indices.series.UVA }, { nombre: "ICL × 50", valores: (D.indices.series.ICL || []).map((v) => (v == null ? null : v * 50)) }],
+      rango, fmt: (v) => num(v, 2), fmtEje: (v) => num(v, 0),
+      nota: "El ICL se multiplica por 50 solo para verlo en la misma escala que la UVA; el valor original está en el Explorador.",
+    });
+    const atr = D.fuentes.filter((f) => f.atrasada);
+    document.getElementById("dinero-nota").textContent =
+      "Fuente: BCRA, API pública de Estadísticas Monetarias (v4). Los préstamos y depósitos reales usan el IPC del INDEC." +
+      (atr.length ? ` Atención: ${atr.length} variable(s) sin dato nuevo hace varios días (${atr.map((f) => f.nombre).join(", ")}).` : "");
   }
 
   // El explorador se carga recién cuando se abre (trae el motor DuckDB-WASM)
@@ -525,7 +638,7 @@
       });
   }
 
-  const RENDER = { portada: renderPortada, precios: renderPrecios, bolsillo: renderBolsillo, actividad: renderActividad, mas: renderMas, explorador: renderExplorador, catalogo: renderCatalogo };
+  const RENDER = { portada: renderPortada, precios: renderPrecios, bolsillo: renderBolsillo, actividad: renderActividad, dinero: renderDinero, mas: renderMas, explorador: renderExplorador, catalogo: renderCatalogo };
   const render = () => { ocultarTip(); RENDER[estado.tab](); };
 
   // Helpers que usa el explorador (módulo aparte)

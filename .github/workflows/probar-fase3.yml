@@ -1,7 +1,7 @@
 name: Probar ingesta (fase 3)
 
-# Solo en la rama fase3: corre las ingestas nuevas y deja los Parquet como
-# artefacto para revisarlos. Se borra al cerrar la fase.
+# Solo en la rama fase3: corre las ingestas nuevas y vuelca los Parquet al log
+# para revisarlos. Se borra al cerrar la fase.
 on:
   push:
     branches: [fase3]
@@ -22,8 +22,10 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python ingesta/bcra.py
       - run: python ingesta/series_tiempo.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: parquet-fase3
-          path: data/parquet/
-          retention-days: 3
+      - name: Volcar resultados al log (para revisarlos fuera de GitHub)
+        run: |
+          cd data/parquet
+          echo "===INICIO==="
+          tar czf - bcra.parquet estado_bcra.json series_extra.parquet estado_series.json | base64 -w 0
+          echo
+          echo "===FIN==="
