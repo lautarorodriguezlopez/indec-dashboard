@@ -48,7 +48,7 @@ async function motor() {
   const worker = new Worker(new URL("vendor/duckdb/duckdb-browser-eh.worker.js", RAIZ));
   db = new duckdb.AsyncDuckDB(new duckdb.VoidLogger(), worker);
   await db.instantiate(new URL("vendor/duckdb/duckdb-eh.wasm", RAIZ).href);
-  await db.registerFileURL("explorador.duckdb", new URL("datos/explorador.duckdb", RAIZ).href, duckdb.DuckDBDataProtocol.HTTP, false);
+  await db.registerFileURL("explorador.duckdb", new URL("datos/explorador.duckdb" + (window.Tablero?.q || ""), RAIZ).href, duckdb.DuckDBDataProtocol.HTTP, false);
   conn = await db.connect();
   // Base de solo lectura y configuración bloqueada: aunque alguien lograra
   // inyectar SQL, no podría instalar extensiones, leer otros archivos ni
@@ -244,7 +244,7 @@ async function correr() {
 }
 
 function bloquear(si) {
-  document.querySelectorAll("#explorador select, #explorador button").forEach((x) => { x.disabled = si; });
+  document.querySelectorAll("#ex-app select, #ex-app button").forEach((x) => { x.disabled = si; });
 }
 
 function ordenTiempo(t) {
@@ -400,7 +400,7 @@ async function descargar() {
 
 // ------------------------------------------------------------------ inicio
 export async function iniciar() {
-  const r = await fetch("data/explorador.json");
+  const r = await fetch("data/explorador.json" + (window.Tablero?.q || ""));
   if (!r.ok) throw new Error("No se pudo cargar el catálogo del explorador");
   meta = await r.json();
   meta.tablas = meta.tablas.filter((t) => ID.test(t.tabla));

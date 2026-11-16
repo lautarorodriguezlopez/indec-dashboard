@@ -866,6 +866,67 @@ def _n(x) -> int:
     return len(x) if isinstance(x, list) else int(x or 0)
 
 
+def _ult(p: list, v: list, n: int = 24) -> dict | None:
+    """Último dato no nulo de una serie + los últimos n valores para la mini-línea."""
+    pares = [(a, b) for a, b in zip(p, v) if b is not None]
+    if not pares:
+        return None
+    return {"p": pares[-1][0], "v": pares[-1][1], "spark": [limpio(b) for _, b in pares[-n:]]}
+
+
+def destacados(pr: dict, bo: dict, pu: dict, b: dict | None) -> list[dict]:
+    """Los números de la portada. Van en tableros.json para que la primera carga sea liviana."""
+    out = []
+
+    def agregar(clave, titulo, tab, u, valor, unidad, detalle, invertir=False):
+        if u is None or valor is None:
+            return
+        out.append({"clave": clave, "titulo": titulo, "tab": tab, "periodo": u["p"], "valor": limpio(valor),
+                    "unidad": unidad, "detalle": detalle, "spark": u["spark"], "invertir": invertir})
+
+    ng = pr["nivel_general"]["Nacional"]
+    u = _ult(ng["p"], ng["series"]["v_m"])
+    via = _ult(ng["p"], ng["series"]["v_ia"])
+    agregar("ipc", "Inflación mensual", "precios", u, u and u["v"], "%",
+            f"interanual {via['v']:.1f} %".replace(".", ",") if via else "", invertir=True)
+
+    if b and b.get("dolar"):
+        k = b["kpi"]["tc_mayorista"]
+        u = _ult(b["dolar"]["p"], b["dolar"]["series"]["Mayorista"], 52)
+        det = f"{(k['v'] / k['v_comp'] - 1) * 100:+.1f} % en 12 meses".replace(".", ",") if k.get("v_comp") else ""
+        agregar("dolar", "Dólar mayorista", "dinero", u, k.get("v"), "$", det)
+
+    em = pu["emae"]
+    u = _ult(em["p"], em["series"]["Índice serie desestacionalizada"])
+    via = _ult(em["p"], em["series"]["Var % interanual serie original"])
+    agregar("emae", "Actividad económica", "actividad", u, via and via["v"], "% i.a.", "EMAE, interanual")
+
+    sr = bo["salario_real"]
+    u = _ult(sr["p"], sr["series"]["Total registrado"])
+    vals = [x for x in sr["series"]["Total registrado"] if x is not None]
+    if u and len(vals) > 12:
+        agregar("salario", "Salario real registrado", "ingresos", u, (vals[-1] / vals[-13] - 1) * 100, "% 12m",
+                "poder de compra frente a hace un año")
+
+    tr = pu["trabajo"]
+    u = _ult(tr["p"], tr["series"]["Desocupación"], 12)
+    agregar("desocupacion", "Desocupación", "ingresos", u, u and u["v"], "%", "de la población activa", invertir=True)
+
+    if b and b.get("reservas"):
+        k = b["kpi"]["reservas"]
+        u = _ult(b["reservas"]["p"], b["reservas"]["series"]["Reservas"], 52)
+        det = f"{(k['v'] - k['v_comp']) / 1000:+.1f} mil M en 12 meses".replace(".", ",") if k.get("v_comp") else ""
+        agregar("reservas", "Reservas del BCRA", "dinero", u, k["v"] / 1000 if k.get("v") else None, "USD mil M", det)
+    return out
+
+
+def estampar_version(version: str) -> None:
+    """Pone la versión del build en index.html: los archivos con ?v= no se mezclan entre publicaciones."""
+    index = SITIO / "index.html"
+    html = index.read_text(encoding="utf-8")
+    index.write_text(html.replace("__BUILD__", version), encoding="utf-8")
+
+
 def main() -> None:
     SALIDA.mkdir(parents=True, exist_ok=True)
     estado = json.loads((DIR / "estado.json").read_text(encoding="utf-8"))
@@ -900,6 +961,7 @@ def main() -> None:
         "bolsillo": bo,
         "pulso": pu,
         "semaforo": semaforo(pr, bo, pu) + semaforo_extra(m),
+        "destacados": destacados(pr, bo, pu, b),
     }
     (SALIDA / "tableros.json").write_text(json.dumps(tableros, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
@@ -935,6 +997,7 @@ def main() -> None:
         extra.drop(columns=["p"]).to_parquet(descargas / "series_extra.parquet", index=False)
     explorador(estado)
 
+    estampar_version(datetime.now(timezone.utc).strftime("%Y%m%d%H%M"))
     tam = (SALIDA / "tableros.json").stat().st_size
     print(f"tableros.json {tam/1024:.0f} KB · semáforo: {len(tableros['semaforo'])} indicadores")
 
