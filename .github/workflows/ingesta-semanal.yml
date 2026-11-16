@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write # para guardar los datos como release "datos"
+  actions: write  # para mantener viva la programación (ver el último paso)
 
 concurrency:
   group: ingesta
@@ -91,6 +92,13 @@ jobs:
           fi
           gh release upload "$RELEASE_TAG" data/parquet/* --clobber
           gh release edit "$RELEASE_TAG" --notes "Datos del Catálogo API-INDEC en Parquet, actualizados cada día hábil a las 17:13 (hora argentina). Fuente: INDEC."
+
+      # GitHub apaga las tareas programadas de un repo público tras 60 días sin commits.
+      # Como la ingesta no hace commits (guarda en un release), se vuelve a habilitar
+      # el workflow por la API: reinicia ese contador sin tocar el código.
+      - name: Mantener activa la actualización diaria
+        if: always()
+        run: gh workflow enable ingesta-semanal.yml --repo "$GITHUB_REPOSITORY" || echo "::warning::no se pudo renovar la programación"
 
       - name: Avisar si hay algo que atender
         run: python ingesta/alertas.py

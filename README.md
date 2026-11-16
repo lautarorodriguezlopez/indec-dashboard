@@ -1,8 +1,8 @@
-# indec-dashboard
+# Termómetro económico argentino
 
-Dashboard con las estadísticas oficiales del INDEC, tomadas del [Catálogo API-INDEC](https://api.indec.gob.ar/) (en beta). Se actualiza cada día hábil a las 17:13 (hora argentina), una hora después de que el INDEC publica sus informes.
+Tablero con la economía argentina en datos oficiales: precios, ingresos y empleo, actividad, dólar y tasas, y cuentas públicas y externas. Junta el [Catálogo API-INDEC](https://api.indec.gob.ar/) (en beta), la API de Estadísticas Monetarias del BCRA, la API de Series de Tiempo de datos.gob.ar (Ministerio de Economía, Secretaría de Trabajo y Secretaría de Seguridad Social) y las planillas que el INDEC publica con sus informes. Se actualiza cada día hábil a las 17:13 (hora argentina), una hora después de que el INDEC publica sus informes.
 
-Fuente de los datos: INDEC.
+Fuentes de los datos: INDEC, BCRA, Ministerio de Economía, Secretaría de Trabajo y Secretaría de Seguridad Social. (El repo conserva el nombre `indec-dashboard` para no romper los enlaces.)
 
 **Sitio:** https://lautarorodriguezlopez.github.io/indec-dashboard/
 
@@ -10,7 +10,7 @@ Fuente de los datos: INDEC.
 
 Hay tres formas, de la más simple a la más completa:
 
-1. **Mirar el sitio:** https://lautarorodriguezlopez.github.io/indec-dashboard/. En la pestaña *Explorador* podés filtrar y graficar cualquiera de los 19 datasets y bajar el resultado en CSV, todo dentro de tu navegador.
+1. **Mirar el sitio:** https://lautarorodriguezlopez.github.io/indec-dashboard/. En la pestaña *Datos*, el explorador te deja filtrar y graficar cualquiera de los datasets y bajar el resultado en CSV, todo dentro de tu navegador.
 2. **Bajar los datos:** los 19 servicios están en Parquet en el [release `datos`](https://github.com/lautarorodriguezlopez/indec-dashboard/releases/tag/datos) y en la sección *Datos* del sitio. Se abren con pandas, R, DuckDB o Power BI, sin token:
 
    ```python

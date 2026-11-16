@@ -22,7 +22,8 @@ jobs:
       - run: pip install -r requirements.txt
       - run: gh release download datos -D data/parquet --clobber
       - run: python ingesta/sitio.py
-      - name: Volcar datos del sitio
+      - name: Verificar
         run: |
-          tar czf d.tgz site/data
-          echo "<<<RAST"; base64 -w 20000 d.tgz; echo "RAST>>>"
+          grep -o 'name="build" content="[0-9]*"' site/index.html
+          grep -c '__BUILD__' site/index.html || true
+          python -c "import json;t=json.load(open('site/data/tableros.json'));print([d['clave'] for d in t['destacados']])"
