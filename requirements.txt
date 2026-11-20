@@ -4,3 +4,5 @@ pandas>=2.2
 pyarrow>=17
 openpyxl==3.1.5
 xlrd==2.0.2
+# Mínimo seguro: < 2026.10.19 incluye raíces emSign comprometidas (PYSEC-2026-4320 / GHSA-6q48-6c7w-9gw2)
+certifi>=2026.10.19
